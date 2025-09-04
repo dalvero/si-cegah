@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1097246901657",
+    "project_id": "fir-sicegah-f3e37",
+    "storage_bucket": "fir-sicegah-f3e37.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097246901657:android:f941dc317359f9fc97bf08",
+        "android_client_info": {
+          "package_name": "com.sicegah.si_cegah"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQryo8Ig4TBA3a4PEfTLHy3QjT0uFnK0I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
