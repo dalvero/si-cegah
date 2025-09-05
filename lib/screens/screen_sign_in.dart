@@ -1,0 +1,276 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:si_cegah/main.dart';
+
+import 'package:si_cegah/pages/home.dart';
+import 'package:si_cegah/screens/screen_sign_up.dart';
+import 'package:si_cegah/services/auth_service.dart';
+
+class SignInScreen extends StatefulWidget {
+  const SignInScreen({super.key});
+
+  @override
+  State<SignInScreen> createState() => _SignInScreenState();
+}
+
+class _SignInScreenState extends State<SignInScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
+  bool isPasswordVisible = false;
+
+  Future<void> _signInWithEmail() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.signInWithEmailAndPassword(
+        _emailController.text,
+        _passwordController.text,
+      );
+      if (mounted) {
+        // Navigasi ke halaman home setelah berhasil login
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const MyApp()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      String message;
+      if (e.code == 'user-not-found') {
+        message = 'Pengguna tidak ditemukan.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Kata sandi salah.';
+      } else {
+        message = 'Terjadi kesalahan saat login. Silakan coba lagi.';
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Terjadi kesalahan. Silakan coba lagi.')),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.signInWithGoogle();
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const Home()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal login dengan Google: ${e.message}")),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // TOMBOL BACK
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+              // JUDUL
+              const Text(
+                "Selamat Datang!",
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 84),
+              // TOMBOL GOOGLE
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+                  fixedSize: const Size(400, 60),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  side: const BorderSide(color: Colors.black12),
+                ),
+                onPressed: _isLoading ? null : _signInWithGoogle,
+                icon: Image.asset(
+                  "assets/images/google_icon.png",
+                  width: 20,
+                  height: 20,
+                ),
+                label: const Text(
+                  "Continue with Google",
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    fontWeight: FontWeight.normal,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // GARIS ATAU LOGIN DENGAN EMAIL
+              Row(
+                children: const [
+                  Expanded(child: Divider(color: Colors.black26)),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text(
+                      "ATAU LOGIN DENGAN EMAIL",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.black54,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: Colors.black26)),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // TEXTFIELD EMAIL
+              TextField(
+                controller: _emailController,
+                decoration: InputDecoration(
+                  hintText: "Email address",
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // TEXTFIELD PASSWORD
+              TextField(
+                controller: _passwordController,
+                obscureText: !isPasswordVisible,
+                decoration: InputDecoration(
+                  hintText: "Password",
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        isPasswordVisible = !isPasswordVisible;
+                      });
+                    },
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // TOMBOL MASUK
+              SizedBox(
+                width: double.infinity,
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: Colors.lightBlueAccent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                        onPressed: _signInWithEmail,
+                        child: const Text(
+                          "Masuk",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'Poppins',
+                            fontSize: 20,
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 12),
+              // FORGOT PASSWORD
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    
+                  },
+                  child: const Text(
+                    "Forgot Password?",
+                    style: TextStyle(
+                      color: Colors.black54,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const SignUpScreen()),
+                  );
+                },
+                child: const Text(
+                  "Belum punya akun? Daftar",
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    color: Colors.black54,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
