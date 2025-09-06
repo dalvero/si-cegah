@@ -14,6 +14,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _peranController;
   final AuthService _authService = AuthService();
   bool _isLoading = false;
   bool isPasswordVisible = false;
@@ -66,9 +67,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _signUp() async {
     if (!agree) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Anda harus menyetujui kebijakan privasi."),
-        ),
+        const SnackBar(content: Text("Anda harus menyetujui kebijakan privasi.")),
+      );
+      return;
+    }
+
+    if (_peranController == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Silakan pilih peran Anda.")),
       );
       return;
     }
@@ -82,12 +88,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _emailController.text,
         _passwordController.text,
         _nameController.text,
+        _peranController!, // ✅ sudah pasti tidak null karena ada validasi di atas
       );
 
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const VerifyEmailScreen()),
-        );
+        _showSuccessDialog(); // ✅ munculkan dialog sukses dulu
       }
     } on FirebaseAuthException catch (e) {
       String message;
@@ -103,16 +108,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
           SnackBar(content: Text(message)),
         );
       }
-    } catch (e) {
-      if (mounted) {
-        _showSuccessDialog();
-      }
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -222,6 +224,37 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 16),
+
+              // === DROPDOWN PERAN ===
+              DropdownButtonFormField<String>(
+              value: _peranController,
+              decoration: InputDecoration(
+                hintText: "Pilih Peran",
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              items: const [
+                DropdownMenuItem(value: "Ibu", child: Text("Ibu")),
+                DropdownMenuItem(value: "Ayah", child: Text("Ayah")),
+                DropdownMenuItem(value: "Tenaga Kesehatan", child: Text("Tenaga Kesehatan")),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _peranController = value;
+                });
+              },
+              validator: (value) =>
+                  value == null ? "Peran wajib dipilih" : null, // ✅ validasi langsung
+            ),
+
+
 
               const SizedBox(height: 16),
 

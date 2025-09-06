@@ -1,124 +1,199 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:si_cegah/screens/screen_welcome.dart';
 import 'package:si_cegah/services/auth_service.dart';
 
-class Profil extends StatefulWidget {
-  const Profil({super.key});
+class Profile extends StatefulWidget {
+  const Profile({super.key});
 
   @override
-  State<Profil> createState() => _ProfilState();
+  State<Profile> createState() => _ProfileState();
 }
 
-class _ProfilState extends State<Profil> {
+class _ProfileState extends State<Profile> {
   final AuthService _authService = AuthService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   User? _user;
-  String _userName = "Memuat...";
-  String _userEmail = "Memuat...";
+  String _userName = "Memuat...";  
+  String _peran = "Memuat...";
+  String _email = "Memuat...";
 
   @override
   void initState() {
     super.initState();
     _user = _authService.currentUser;
     _fetchUserProfile();
-  }
+  }  
 
   Future<void> _fetchUserProfile() async {
     if (_user != null) {
       final doc = await _firestore.collection('users').doc(_user!.uid).get();
       if (doc.exists && mounted) {
         setState(() {
-          _userName = doc.data()?['name'] ?? 'Tidak Ditemukan';
-          _userEmail = doc.data()?['email'] ?? 'Tidak Ditemukan';
+          _userName = doc.data()?['name'] ?? 'Tidak Ditemukan';    
+          _email = doc.data()?['email'] ?? 'Tidak Ditemukan';
+          _peran = doc.data()?['peran'] ?? 'Tidak Ditemukan';      
         });
       }
-    }
-  }
-
-  Future<void> _signOut() async {
-    await _authService.signOut();
-    if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-        (route) => false,
-      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          "Profil Saya",
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Poppins',
-            fontSize: 20,
-          )
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.blueAccent,
-                child: Icon(Icons.person, size: 60, color: Colors.white),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _userName,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins',
+      backgroundColor: Colors.grey[100],
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Header
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  height: 180,
+                  decoration: const BoxDecoration(
+                    color: Colors.lightBlueAccent,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(30),
+                      bottomRight: Radius.circular(30),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _userEmail,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                  fontFamily: 'Poppins',
+                Positioned(
+                  bottom: 50,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 55,
+                        backgroundColor: Colors.white,
+                        child: CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.grey[300],
+                          child: const Icon(
+                            Icons.person,
+                            size: 50,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Colors.black87,
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 40),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _signOut,
-                  icon: const Icon(Icons.logout, color: Colors.white),
-                  label: Text(
-                    "Log Out",
+              ],
+            ),
+            const SizedBox(height: 70),
+
+            // Form Data
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Edit Profil",
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
                       fontFamily: 'Poppins',
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.0),
+                  const SizedBox(height: 20),
+
+                  // Nama
+                  TextField(
+                    controller: TextEditingController(text: _userName),
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: "Nama",
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+
+                  // Email
+                  TextField(
+                    controller: TextEditingController(text: _email),
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: "Email",
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Peran (sementara statis)
+                  TextField(
+                    controller: TextEditingController(text: _peran),
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: "Peran",
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Tombol Logout
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      onPressed: () async {
+                        await _authService.signOut();
+                        if (context.mounted) {
+                          Navigator.of(context).pushReplacementNamed("/login");
+                        }
+                      },
+                      child: const Text(
+                        "Logout",
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

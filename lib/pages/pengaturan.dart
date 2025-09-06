@@ -1,3 +1,4 @@
+// pengaturan.dart (modifikasi)
 import 'package:flutter/material.dart';
 
 class Pengaturan extends StatefulWidget {
@@ -10,6 +11,11 @@ class Pengaturan extends StatefulWidget {
 class _PengaturanState extends State<Pengaturan> {
   @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    return const Center( // Ubah Placeholder menjadi Center dengan Text
+      child: Text(
+        "Halaman Pengaturan",
+        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      ),
+    );
   }
 }

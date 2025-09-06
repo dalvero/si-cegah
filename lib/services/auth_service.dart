@@ -10,31 +10,37 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
 
   // ---- Metode Pendaftaran Email/Kata Sandi ----
-  Future<UserCredential?> signUpWithEmailAndPassword(String email, String password, String name) async {
-    try {
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+  Future<UserCredential?> signUpWithEmailAndPassword(
+  String email,
+  String password,
+  String name,
+  String peran, // ✅ tambahkan parameter peran
+) async {
+  try {
+    final userCredential = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
 
-      // Kirim email verifikasi segera setelah pendaftaran berhasil
-      await userCredential.user?.sendEmailVerification();
+    // Kirim email verifikasi
+    await userCredential.user?.sendEmailVerification();
 
-      // Simpan data pengguna di Firestore
-      if (userCredential.user != null) {
-        await _firestore.collection('users').doc(userCredential.user!.uid).set({
-          'uid': userCredential.user!.uid,
-          'email': email,
-          'name': name,
-          'role': 'user',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      }
-      return userCredential;
-    } on FirebaseAuthException {
-      rethrow;
+    // Simpan data pengguna di Firestore
+    if (userCredential.user != null) {
+      await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        'uid': userCredential.user!.uid,
+        'email': email,
+        'name': name,
+        'role': 'user', // tetap untuk otorisasi sistem
+        'peran': peran, // ✅ simpan pilihan peran
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     }
+    return userCredential;
+  } on FirebaseAuthException {
+    rethrow;
   }
+}
 
   // ---- Metode Login Email/Kata Sandi ----
   Future<UserCredential?> signInWithEmailAndPassword(String email, String password) async {
