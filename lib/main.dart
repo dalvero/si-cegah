@@ -8,7 +8,7 @@ import 'package:si_cegah/screens/screen_welcome.dart';
 import 'package:si_cegah/pages/home.dart';
 import 'package:si_cegah/pages/profil.dart';
 import 'package:si_cegah/pages/pengaturan.dart';
-import 'package:si_cegah/pages/admin/dashboard.dart'; // ✅ buat halaman dashboard admin
+import 'package:si_cegah/pages/admin/dashboard.dart'; 
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 
 void main() async {
@@ -42,7 +42,7 @@ class AppSwitcher extends StatefulWidget {
 class _AppSwitcherState extends State<AppSwitcher> {
   int _selectedIndex = 1;
   bool _isLoading = false;
-  String? _role; // ✅ untuk menyimpan role user
+  String? _role; 
 
   @override
   void initState() {
@@ -71,7 +71,7 @@ class _AppSwitcherState extends State<AppSwitcher> {
 
     await Future.delayed(const Duration(seconds: 1)); // LOADING SCREEN
 
-    setState(() {
+    setState(() { 
       _selectedIndex = index;
       _isLoading = false;
     });
@@ -102,24 +102,22 @@ class _AppSwitcherState extends State<AppSwitcher> {
           return const LoadingScreen();
         }
         if (snapshot.hasData) {
-          if (_role == null) {
-            // masih loading role dari Firestore
+          if (_role == null) {            
             return const LoadingScreen();
           }
 
-          // ✅ daftar halaman untuk user biasa
+          
           final userPages = const [
             Pengaturan(key: ValueKey('PengaturanPage')),
             Home(key: ValueKey('HomePage')),
             Profile(key: ValueKey('ProfilPage')),
           ];
-
-          // ✅ daftar halaman untuk admin
+          
           final adminPages = const [
             Pengaturan(key: ValueKey('PengaturanPage')),
             Home(key: ValueKey('HomePage')),
             Profile(key: ValueKey('ProfilPage')),
-            Dashboard(key: ValueKey('DashboardPage')), // halaman admin
+            Dashboard(key: ValueKey('DashboardPage')), 
           ];
 
           final pages = _role == 'admin' ? adminPages : userPages;
@@ -144,7 +142,7 @@ class _AppSwitcherState extends State<AppSwitcher> {
                       _buildAnimatedIcon(Icons.home, 1),
                       _buildAnimatedIcon(Icons.person, 2),
                       if (_role == 'admin')
-                        _buildAnimatedIcon(Icons.dashboard, 3), // ✅ tambahan menu
+                        _buildAnimatedIcon(Icons.dashboard, 3), 
                     ],
                     onTap: _onItemTapped,
                   ),
