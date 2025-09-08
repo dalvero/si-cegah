@@ -1,7 +1,8 @@
+// ignore_for_file: unused_import, unused_local_variable
+
 import 'package:flutter/material.dart';
-import 'package:si_cegah/screens/screen_verify_email.dart';
 import 'package:si_cegah/services/auth_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:si_cegah/models/auth_models.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -14,7 +15,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  String? _peranController;
+  String? _roleController;
   final AuthService _authService = AuthService();
   bool _isLoading = false;
   bool isPasswordVisible = false;
@@ -33,15 +34,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
             "Pendaftaran Berhasil!",
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontFamily: 'Poppins'
-              ),
+              fontFamily: 'Poppins',
+            ),
           ),
           content: Text(
-            "Akun Anda telah berhasil dibuat. Silakan cek email Anda untuk verifikasi.",
+            "Akun Anda telah berhasil dibuat. Silakan login untuk melanjutkan.",
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontFamily: 'Poppins'
-              ),
+              fontFamily: 'Poppins',
+            ),
           ),
           actions: <Widget>[
             TextButton(
@@ -49,13 +50,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 "OK",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins'
-                  ),
+                  fontFamily: 'Poppins',
+                ),
               ),
               onPressed: () {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => VerifyEmailScreen(userName: _nameController.text)),
-                );
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Back to login
               },
             ),
           ],
@@ -64,59 +64,146 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  Future<void> _signUp() async {
-    if (!agree) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Anda harus menyetujui kebijakan privasi.")),
-      );
-      return;
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Poppins',
+              color: Colors.red,
+            ),
+          ),
+          content: Text(message, style: TextStyle(fontFamily: 'Poppins')),
+          actions: <Widget>[
+            TextButton(
+              child: Text(
+                "OK",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Validasi form
+  bool _validateForm() {
+    if (_nameController.text.trim().isEmpty) {
+      _showErrorDialog("Error", "Nama tidak boleh kosong.");
+      return false;
     }
 
-    if (_peranController == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Silakan pilih peran Anda.")),
-      );
-      return;
+    if (_emailController.text.trim().isEmpty) {
+      _showErrorDialog("Error", "Email tidak boleh kosong.");
+      return false;
     }
+
+    if (_passwordController.text.isEmpty) {
+      _showErrorDialog("Error", "Password tidak boleh kosong.");
+      return false;
+    }
+
+    if (_passwordController.text.length < 6) {
+      _showErrorDialog("Error", "Password minimal 6 karakter.");
+      return false;
+    }
+
+    if (_roleController == null) {
+      _showErrorDialog("Error", "Silakan pilih peran Anda.");
+      return false;
+    }
+
+    if (!agree) {
+      _showErrorDialog("Error", "Anda harus menyetujui kebijakan privasi.");
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<void> _signUp() async {
+    if (!_validateForm()) return;
 
     setState(() {
       _isLoading = true;
     });
 
     try {
-      await _authService.signUpWithEmailAndPassword(
-        _emailController.text,
-        _passwordController.text,
-        _nameController.text,
-        "user",          // ✅ default user
-        _peranController!, 
+      print("🔄 Sending registration request...");
+      print(
+        "📝 Data: name=${_nameController.text}, email=${_emailController.text}, role=${_roleController}",
       );
 
+      final registerResponse = await _authService.register(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim().toLowerCase(),
+        password: _passwordController.text,
+        role:
+            _roleController ??
+            "BIDAN", // Backend menggunakan "user" sebagai default role
+      );
+
+      print("✅ Registration successful: ${registerResponse.message}");
 
       if (mounted) {
-        _showSuccessDialog(); // ✅ munculkan dialog sukses dulu
+        _showSuccessDialog();
       }
-    } on FirebaseAuthException catch (e) {
-      String message;
-      if (e.code == 'weak-password') {
-        message = 'Kata sandi terlalu lemah.';
-      } else if (e.code == 'email-already-in-use') {
-        message = 'Email sudah terdaftar.';
-      } else {
-        message = 'Terjadi kesalahan saat pendaftaran. Silakan coba lagi.';
-      }
+    } on AuthError catch (e) {
+      print("❌ AuthError: ${e.error} (Status: ${e.statusCode})");
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
+        String message;
+        switch (e.statusCode) {
+          case 409:
+            message = 'Email sudah terdaftar. Silakan gunakan email lain.';
+            break;
+          case 400:
+            message = 'Data tidak valid. Periksa kembali input Anda.';
+            break;
+          case 422:
+            message = 'Format data tidak sesuai. Periksa email dan password.';
+            break;
+          case 500:
+            message = 'Server sedang bermasalah. Silakan coba lagi nanti.';
+            break;
+          default:
+            message = e.error.isNotEmpty
+                ? e.error
+                : 'Terjadi kesalahan pada server.';
+        }
+        _showErrorDialog("Gagal Mendaftar", message);
+      }
+    } catch (e) {
+      print("❌ Unexpected error: $e");
+
+      if (mounted) {
+        _showErrorDialog(
+          "Kesalahan Jaringan",
+          'Tidak dapat terhubung ke server. Periksa koneksi internet Anda dan coba lagi.',
         );
       }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -154,36 +241,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               const SizedBox(height: 64),
 
-              // TOMBOL GOOGLE
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  fixedSize: Size(400, 60),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  side: const BorderSide(color: Colors.black12),
-                ),
-                onPressed: _isLoading ? null : () {                  
-                },
-                icon: Image.asset(
-                  "assets/images/google_icon.png",
-                  width: 20,
-                  height: 20,
-                ),
-                label: Text(
-                  "Continue with Google",
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    fontWeight: FontWeight.normal,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
               // GARIS ATAU DENGAN EMAIL
               Row(
                 children: [
@@ -191,7 +248,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8.0),
                     child: Text(
-                      "ATAU DAFTAR DENGAN EMAIL",
+                      "DAFTAR DENGAN EMAIL",
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 12,
@@ -216,10 +273,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   color: Colors.black87,
                 ),
                 decoration: InputDecoration(
-                  hintText: "Nama",
+                  hintText: "Nama Lengkap",
                   filled: true,
                   fillColor: Colors.grey[100],
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -229,36 +289,42 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               const SizedBox(height: 16),
 
-              // === DROPDOWN PERAN ===
+              // === DROPDOWN PERAN (Untuk UI saja, backend menggunakan default "user") ===
               DropdownButtonFormField<String>(
-              value: _peranController,
-              dropdownColor: Colors.white,
-              borderRadius: BorderRadius.all(Radius.circular(20)),                          
-              decoration: InputDecoration(
-                hintText: "Pilih Peran",
-                filled: true,
-                fillColor: Colors.grey[100],              
-                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+                value: _roleController,
+                dropdownColor: Colors.white,
+                borderRadius: BorderRadius.all(Radius.circular(20)),
+                decoration: InputDecoration(
+                  hintText: "Pilih Peran (Opsional untuk Profile)",
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
+                items: const [
+                  DropdownMenuItem(value: "IBU", child: Text("Ibu")),
+                  DropdownMenuItem(value: "AYAH", child: Text("Ayah")),
+                  DropdownMenuItem(
+                    value: "TENAGA_KESEHATAN",
+                    child: Text("Tenaga Kesehatan"),
+                  ),
+                  DropdownMenuItem(value: "KADER", child: Text("Kader")),
+                  DropdownMenuItem(value: "BIDAN", child: Text("Bidan")),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _roleController = value;
+                  });
+                },
+                validator: (value) =>
+                    value == null ? "Peran wajib dipilih" : null,
               ),
-              items: const [
-                DropdownMenuItem(value: "Ibu", child: Text("Ibu")),
-                DropdownMenuItem(value: "Ayah", child: Text("Ayah")),
-                DropdownMenuItem(value: "Tenaga Kesehatan", child: Text("Tenaga Kesehatan")),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _peranController = value;
-                });
-              },
-              validator: (value) =>
-                  value == null ? "Peran wajib dipilih" : null, // ✅ validasi langsung
-            ),
-
-
 
               const SizedBox(height: 16),
 
@@ -273,10 +339,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   color: Colors.black87,
                 ),
                 decoration: InputDecoration(
-                  hintText: "Email address",
+                  hintText: "Email Address",
                   filled: true,
                   fillColor: Colors.grey[100],
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -297,12 +366,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   color: Colors.black87,
                 ),
                 decoration: InputDecoration(
-                  hintText: "Password",
+                  hintText: "Password (Min. 6 karakter)",
                   filled: true,
                   fillColor: Colors.grey[100],
                   suffixIcon: IconButton(
                     icon: Icon(
-                      isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                       color: Colors.grey,
                     ),
                     onPressed: () {
@@ -311,7 +382,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       });
                     },
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -343,9 +417,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           color: Colors.black54,
                         ),
                         children: [
-                          TextSpan(text: "I have read the "),
+                          TextSpan(text: "Saya telah membaca dan menyetujui "),
                           TextSpan(
-                            text: "Privacy Policy",
+                            text: "Kebijakan Privasi",
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               color: Colors.blue,
@@ -365,18 +439,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
               SizedBox(
                 width: double.infinity,
                 child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: const Center(child: CircularProgressIndicator()),
+                      )
                     : ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: agree ? Colors.lightBlueAccent : Colors.grey,
+                          backgroundColor: agree
+                              ? Colors.lightBlueAccent
+                              : Colors.grey,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
                         ),
                         onPressed: agree ? _signUp : null,
                         child: Text(
-                          "Daftar!",
+                          "Daftar Sekarang",
                           style: TextStyle(
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.bold,
@@ -386,6 +469,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                       ),
               ),
+
+              const SizedBox(height: 20),
+
+              // DEBUG INFO (hapus di production)
+              if (_isLoading)
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    "Menghubungi server: ${AuthService().toString().split('@')[0]}...",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue[800],
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

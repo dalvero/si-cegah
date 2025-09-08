@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:si_cegah/main.dart';
-
-import 'package:si_cegah/pages/home.dart';
+import 'package:si_cegah/screens/screen_get_started.dart';
 import 'package:si_cegah/screens/screen_sign_up.dart';
 import 'package:si_cegah/services/auth_service.dart';
+import 'package:si_cegah/models/auth_models.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -26,59 +25,47 @@ class _SignInScreenState extends State<SignInScreen> {
     });
 
     try {
-      await _authService.signInWithEmailAndPassword(
-        _emailController.text,
-        _passwordController.text,
+      final loginResponse = await _authService.login(
+        email: _emailController.text,
+        password: _passwordController.text,
       );
+
       if (mounted) {
-        // NAVIGASI KE HALAMAN HOME SETELAH BERHASIL LOGIN
+        // Navigasi ke halaman home setelah berhasil login
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MyApp()),
+          MaterialPageRoute(builder: (context) => const GetStartedScreen()),
         );
-      }
-    } on FirebaseAuthException catch (e) {
-      String message;
-      if (e.code == 'user-not-found') {
-        message = 'Pengguna tidak ditemukan.';
-      } else if (e.code == 'wrong-password') {
-        message = 'Kata sandi salah.';
-      } else {
-        message = 'Terjadi kesalahan saat login. Silakan coba lagi.';
-      }
-      if (mounted) {
+
+        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
+          SnackBar(
+            content: Text('Selamat datang, ${loginResponse.user.name}!'),
+          ),
         );
+      }
+    } on AuthError catch (e) {
+      if (mounted) {
+        String message;
+        switch (e.statusCode) {
+          case 401:
+            message = 'Email atau password salah.';
+            break;
+          case 404:
+            message = 'Pengguna tidak ditemukan.';
+            break;
+          default:
+            message = e.error;
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Terjadi kesalahan. Silakan coba lagi.')),
-        );
-      }
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _signInWithGoogle() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await _authService.signInWithGoogle();
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const Home()),
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal login dengan Google: ${e.message}")),
+          const SnackBar(
+            content: Text('Terjadi kesalahan. Silakan coba lagi.'),
+          ),
         );
       }
     } finally {
@@ -120,33 +107,6 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
               ),
               const SizedBox(height: 84),
-              // TOMBOL GOOGLE
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-                  fixedSize: const Size(400, 60),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  side: const BorderSide(color: Colors.black12),
-                ),
-                onPressed: _isLoading ? null : _signInWithGoogle,
-                icon: Image.asset(
-                  "assets/images/google_icon.png",
-                  width: 20,
-                  height: 20,
-                ),
-                label: const Text(
-                  "Continue with Google",
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    fontWeight: FontWeight.normal,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
               // GARIS ATAU LOGIN DENGAN EMAIL
               Row(
                 children: const [
@@ -154,7 +114,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: Text(
-                      "ATAU LOGIN DENGAN EMAIL",
+                      "LOGIN DENGAN EMAIL",
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.black54,
@@ -174,7 +134,10 @@ class _SignInScreenState extends State<SignInScreen> {
                   hintText: "Email address",
                   filled: true,
                   fillColor: Colors.grey[100],
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -192,7 +155,9 @@ class _SignInScreenState extends State<SignInScreen> {
                   fillColor: Colors.grey[100],
                   suffixIcon: IconButton(
                     icon: Icon(
-                      isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                       color: Colors.grey,
                     ),
                     onPressed: () {
@@ -201,7 +166,10 @@ class _SignInScreenState extends State<SignInScreen> {
                       });
                     },
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -240,7 +208,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    
+                    // TODO: Implement forgot password
                   },
                   child: const Text(
                     "Forgot Password?",
@@ -255,7 +223,9 @@ class _SignInScreenState extends State<SignInScreen> {
               TextButton(
                 onPressed: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const SignUpScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const SignUpScreen(),
+                    ),
                   );
                 },
                 child: const Text(

@@ -1,63 +1,17 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:si_cegah/screens/screen_get_started.dart';
-import 'package:si_cegah/services/auth_service.dart';
-
+import 'package:si_cegah/screens/screen_sign_in.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   final String userName;
   const VerifyEmailScreen({super.key, required this.userName});
-
 
   @override
   State<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
 }
 
 class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
-  
-  final AuthService _authService = AuthService();
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    // Kirim email verifikasi saat halaman dimuat
-    _authService.currentUser?.sendEmailVerification();
-    
-    // Periksa status verifikasi setiap 3 detik
-    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      checkEmailVerified();
-    });
-  }
-
-  Future<void> checkEmailVerified() async {
-    // PERBARUI STATUS PENGGUNA
-    await _authService.currentUser?.reload();
-    final user = _authService.currentUser;
-    if (user != null && user.emailVerified) {
-      _timer?.cancel();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email berhasil diverifikasi!')),
-        );
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => GetStartedScreen(userName: widget.userName),
-          ),
-        );      
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final userEmail = _authService.currentUser?.email ?? 'alamat email Anda';
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -65,8 +19,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            Icon(Icons.email_outlined, size: 100, color: Colors.blue),
+            const SizedBox(height: 32),
             Text(
-              "Verifikasi Email Anda",
+              "Pendaftaran Berhasil!",
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -76,7 +32,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              "Kami telah mengirim tautan verifikasi ke $userEmail. Silakan periksa email Anda dan klik tautan tersebut untuk melanjutkan.",
+              "Selamat ${widget.userName}! Akun Anda telah berhasil dibuat. Silakan login untuk melanjutkan menggunakan aplikasi.",
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey[700],
@@ -84,17 +40,34 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
-            CircularProgressIndicator(),
-            const SizedBox(height: 32),
-            TextButton(
-              onPressed: () {
-                _authService.currentUser?.sendEmailVerification();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Tautan verifikasi telah dikirim ulang!')),
-                );
-              },
-              child: const Text("Kirim ulang email verifikasi"),
+            const SizedBox(height: 48),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.lightBlueAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => const SignInScreen(),
+                    ),
+                  );
+                },
+                child: const Text(
+                  "Login Sekarang",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontFamily: 'Poppins',
+                    fontSize: 18,
+                  ),
+                ),
+              ),
             ),
           ],
         ),

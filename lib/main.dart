@@ -1,6 +1,7 @@
+// ignore_for_file: unused_import
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:si_cegah/screens/screen_loading.dart';
 import 'firebase_options.dart';
@@ -8,14 +9,17 @@ import 'package:si_cegah/screens/screen_welcome.dart';
 import 'package:si_cegah/pages/home.dart';
 import 'package:si_cegah/pages/profil.dart';
 import 'package:si_cegah/pages/pengaturan.dart';
-import 'package:si_cegah/pages/admin/dashboard.dart'; 
+import 'package:si_cegah/pages/admin/dashboard.dart';
+import 'package:si_cegah/services/auth_service.dart';
+import 'package:si_cegah/models/auth_models.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+
+  // Tetap init Firebase untuk Firestore (data video)
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const MyApp());
 }
 
@@ -41,25 +45,45 @@ class AppSwitcher extends StatefulWidget {
 
 class _AppSwitcherState extends State<AppSwitcher> {
   int _selectedIndex = 1;
-  bool _isLoading = false;
-  String? _role; 
+  bool _isLoading = true;
+  bool _isLoggedIn = false;
+  String? _role;
+
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
-    _getUserRole();
+    _checkAuthStatus();
   }
 
-  Future<void> _getUserRole() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+  Future<void> _checkAuthStatus() async {
+    try {
+      final isLoggedIn = await _authService.isLoggedIn();
 
+      if (isLoggedIn) {
+        // Refresh current user data
+        await _authService.refreshCurrentUser();
+        final user = _authService.currentUser;
+
+        setState(() {
+          _isLoggedIn = true;
+          _role = user?.role ?? 'user';
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoggedIn = false;
+          _role = null;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error checking auth status: $e');
       setState(() {
-        _role = snapshot.data()?['role'] ?? 'user';
+        _isLoggedIn = false;
+        _role = null;
+        _isLoading = false;
       });
     }
   }
@@ -71,7 +95,7 @@ class _AppSwitcherState extends State<AppSwitcher> {
 
     await Future.delayed(const Duration(seconds: 1)); // LOADING SCREEN
 
-    setState(() { 
+    setState(() {
       _selectedIndex = index;
       _isLoading = false;
     });
@@ -95,61 +119,53 @@ class _AppSwitcherState extends State<AppSwitcher> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const LoadingScreen();
-        }
-        if (snapshot.hasData) {
-          if (_role == null) {            
-            return const LoadingScreen();
-          }
+    // Show loading while checking auth status
+    if (_isLoading) {
+      return const LoadingScreen();
+    }
 
-          
-          final userPages = const [
-            Pengaturan(key: ValueKey('PengaturanPage')),
-            Home(key: ValueKey('HomePage')),
-            Profile(key: ValueKey('ProfilPage')),
-          ];
-          
-          final adminPages = const [
-            Pengaturan(key: ValueKey('PengaturanPage')),
-            Home(key: ValueKey('HomePage')),
-            Profile(key: ValueKey('ProfilPage')),
-            Dashboard(key: ValueKey('DashboardPage')), 
-          ];
+    // Show welcome screen if not logged in
+    if (!_isLoggedIn) {
+      return const WelcomeScreen();
+    }
 
-          final pages = _role == 'admin' ? adminPages : userPages;
+    // Build main app interface for logged in users
+    final userPages = const [
+      Pengaturan(key: ValueKey('PengaturanPage')),
+      Home(key: ValueKey('HomePage')),
+      Profile(key: ValueKey('ProfilPage')),
+    ];
 
-          return _isLoading
-              ? const LoadingScreen()
-              : Scaffold(
-                  extendBody: true,
-                  body: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 600),
-                    child: pages[_selectedIndex],
-                  ),
-                  bottomNavigationBar: CurvedNavigationBar(
-                    index: _selectedIndex,
-                    height: 70,
-                    backgroundColor: Colors.transparent,
-                    color: Colors.black,
-                    animationCurve: Curves.easeInOutCubic,
-                    animationDuration: const Duration(milliseconds: 600),
-                    items: [
-                      _buildAnimatedIcon(Icons.settings, 0),
-                      _buildAnimatedIcon(Icons.home, 1),
-                      _buildAnimatedIcon(Icons.person, 2),
-                      if (_role == 'admin')
-                        _buildAnimatedIcon(Icons.dashboard, 3), 
-                    ],
-                    onTap: _onItemTapped,
-                  ),
-                );
-        }
-        return const WelcomeScreen();
-      },
+    final adminPages = const [
+      Pengaturan(key: ValueKey('PengaturanPage')),
+      Home(key: ValueKey('HomePage')),
+      Profile(key: ValueKey('ProfilPage')),
+      Dashboard(key: ValueKey('DashboardPage')),
+    ];
+
+    final pages = _role == 'admin' ? adminPages : userPages;
+
+    return Scaffold(
+      extendBody: true,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 600),
+        child: pages[_selectedIndex],
+      ),
+      bottomNavigationBar: CurvedNavigationBar(
+        index: _selectedIndex,
+        height: 70,
+        backgroundColor: Colors.transparent,
+        color: Colors.black,
+        animationCurve: Curves.easeInOutCubic,
+        animationDuration: const Duration(milliseconds: 600),
+        items: [
+          _buildAnimatedIcon(Icons.settings, 0),
+          _buildAnimatedIcon(Icons.home, 1),
+          _buildAnimatedIcon(Icons.person, 2),
+          if (_role == 'admin') _buildAnimatedIcon(Icons.dashboard, 3),
+        ],
+        onTap: _onItemTapped,
+      ),
     );
   }
 }
