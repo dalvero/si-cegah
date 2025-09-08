@@ -31,7 +31,7 @@ class _SignInScreenState extends State<SignInScreen> {
         _passwordController.text,
       );
       if (mounted) {
-        // Navigasi ke halaman home setelah berhasil login
+        // NAVIGASI KE HALAMAN HOME SETELAH BERHASIL LOGIN
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const MyApp()),
         );

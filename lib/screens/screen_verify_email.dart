@@ -1,17 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:si_cegah/main.dart';
+import 'package:si_cegah/screens/screen_get_started.dart';
 import 'package:si_cegah/services/auth_service.dart';
 
 
 class VerifyEmailScreen extends StatefulWidget {
-  const VerifyEmailScreen({super.key});
+  final String userName;
+  const VerifyEmailScreen({super.key, required this.userName});
+
 
   @override
   State<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
 }
 
 class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
+  
   final AuthService _authService = AuthService();
   Timer? _timer;
 
@@ -28,7 +31,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   }
 
   Future<void> checkEmailVerified() async {
-    // Perbarui status pengguna
+    // PERBARUI STATUS PENGGUNA
     await _authService.currentUser?.reload();
     final user = _authService.currentUser;
     if (user != null && user.emailVerified) {
@@ -38,8 +41,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
           const SnackBar(content: Text('Email berhasil diverifikasi!')),
         );
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MyApp()),
-        );
+          MaterialPageRoute(
+            builder: (context) => GetStartedScreen(userName: widget.userName),
+          ),
+        );      
       }
     }
   }

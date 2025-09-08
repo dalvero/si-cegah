@@ -54,7 +54,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
               onPressed: () {
                 Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => const VerifyEmailScreen()),
+                  MaterialPageRoute(builder: (context) => VerifyEmailScreen(userName: _nameController.text)),
                 );
               },
             ),
@@ -88,8 +88,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _emailController.text,
         _passwordController.text,
         _nameController.text,
-        _peranController!, // ✅ sudah pasti tidak null karena ada validasi di atas
+        "user",          // ✅ default user
+        _peranController!, 
       );
+
 
       if (mounted) {
         _showSuccessDialog(); // ✅ munculkan dialog sukses dulu
@@ -230,10 +232,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
               // === DROPDOWN PERAN ===
               DropdownButtonFormField<String>(
               value: _peranController,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(20)),                          
               decoration: InputDecoration(
                 hintText: "Pilih Peran",
                 filled: true,
-                fillColor: Colors.grey[100],
+                fillColor: Colors.grey[100],              
                 contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -317,12 +321,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               const SizedBox(height: 20),
 
-              // Checkbox
+              // CHECKBOX
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Checkbox(
                     value: agree,
+                    activeColor: Colors.blue,
                     onChanged: (val) {
                       setState(() {
                         agree = val ?? false;
@@ -356,7 +361,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               const SizedBox(height: 20),
 
-              // Tombol Daftar
+              // TOMBOL DAFTAR
               SizedBox(
                 width: double.infinity,
                 child: _isLoading

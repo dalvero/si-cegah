@@ -11,7 +11,8 @@ import 'package:si_cegah/screens/screen_video_player.dart';
 
 
 class Home extends StatefulWidget {
-  const Home({super.key}); // Key sudah ditambahkan di AppSwitcher, pastikan constructor menerima super.key
+  const Home({super.key}); 
+  // KEY SUDAH DITAMBAHKAN DI AppSwitcher, PASTIKAN CONSTRUCTOR MENERIMA super.key
 
   @override
   State<Home> createState() => _HomeState();
@@ -24,8 +25,7 @@ class _HomeState extends State<Home> {
   final AuthService _authService = AuthService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   User? _user;
-  String _userName = "Memuat...";  
-
+  String _userName = "Memuat...";    
 
   @override
   void initState() {
@@ -39,7 +39,7 @@ class _HomeState extends State<Home> {
       final doc = await _firestore.collection('users').doc(_user!.uid).get();
       if (doc.exists && mounted) {
         setState(() {
-          _userName = doc.data()?['name'] ?? 'Tidak Ditemukan';          
+          _userName = doc.data()?['name'] ?? 'Tidak Ditemukan';                
         });
       }
     }
@@ -169,7 +169,7 @@ Widget build(BuildContext context) {
             child: Text(
               '"${greeting["message"]}"',
               style: const TextStyle(
-                fontSize: 20.0,
+                fontSize: 18.0,
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
@@ -191,7 +191,14 @@ Widget build(BuildContext context) {
               width: double.infinity,
               constraints: const BoxConstraints(maxHeight: 600),
               decoration: const BoxDecoration(
-                color: Color.fromARGB(255, 221, 219, 247),
+                gradient: LinearGradient(
+                  colors: [
+                    Color.fromARGB(255, 21, 226, 106), 
+                    Color(0xFF42A5F5), 
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
@@ -213,8 +220,8 @@ Widget build(BuildContext context) {
                     ),
                     const SizedBox(height: 12),
 
-                    Flexible(
-                      child: StreamBuilder<List<VideoItem>>(
+                    Flexible(                      
+                      child: StreamBuilder<List<VideoItem>>(                        
                         stream: _videoService.getVideosStream(),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==
@@ -234,7 +241,7 @@ Widget build(BuildContext context) {
 
                           final videos = snapshot.data!;
                           return ListView.builder(
-                            shrinkWrap: true,
+                            shrinkWrap: true,                            
                             itemCount: videos.length,
                             itemBuilder: (context, index) {
                               final video = videos[index];
@@ -242,12 +249,13 @@ Widget build(BuildContext context) {
                                   ? video.youtubeThumbnailUrl
                                   : video.thumbnail;
                               return Container(
-                                margin: const EdgeInsets.only(bottom: 16.0),
+                                margin: const EdgeInsets.only(bottom: 16.0),                                                                
                                 child: VideoCard(
                                   title: video.title,
                                   category: video.category,
                                   duration: video.duration,
                                   thumbnail: thumbnailUrl,
+                                  description: video.description,
                                   rating:
                                       double.tryParse(video.rating) ?? 0.0,
                                   onTap: () {

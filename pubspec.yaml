@@ -43,6 +43,8 @@ dependencies:
   youtube_player_flutter: ^9.0.0
   flutter_inappwebview: ^6.0.0
   curved_navigation_bar: ^1.0.6
+  http: ^1.2.2
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

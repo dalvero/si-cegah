@@ -5,6 +5,7 @@ class VideoCard extends StatelessWidget {
   final String category;
   final String duration;
   final String thumbnail;
+  final String description;
   final double rating;
   final VoidCallback onTap;
 
@@ -14,6 +15,7 @@ class VideoCard extends StatelessWidget {
     required this.category,
     required this.duration,
     required this.thumbnail,
+    required this.description,
     required this.rating,
     required this.onTap,
   });
@@ -31,7 +33,7 @@ class VideoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Gambar Thumbnail
+            // GAMBAR THUMBNAIL
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               child: 
@@ -49,15 +51,9 @@ class VideoCard extends StatelessWidget {
                   );
                 },
               ),
-              // Image.asset(
-              //   thumbnail,
-              //   width: double.infinity,
-              //   height: 200,
-              //   fit: BoxFit.cover,
-              // ),
             ),
             
-            // Konten Video
+            // KONTEN VIDEO
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(

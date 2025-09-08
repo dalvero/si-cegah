@@ -8,14 +8,15 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
+      backgroundColor: Colors.white,
+      body: Center(        
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 48.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Logo "Si-Cegah Hebat"
+              // LOGO Si-Cegah Hebat
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -50,11 +51,10 @@ class WelcomeScreen extends StatelessWidget {
 
               // GAMBAR ILUSTRASI
               Image.asset(
-                "assets/images/welcome_pict1.png",
+                "assets/images/welcome.gif",
                 width: 250,
-                height: 250,
-              ),
-              const SizedBox(height: 32),
+                height: 250,                
+              ),              
 
               // JUDUL UTAMA
               Text(
