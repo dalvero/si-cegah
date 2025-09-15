@@ -12,7 +12,6 @@ import 'package:si_cegah/pages/pengaturan.dart';
 import 'package:si_cegah/pages/admin/dashboard.dart';
 import 'package:si_cegah/services/auth_service.dart';
 import 'package:si_cegah/models/auth_models.dart';
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -101,18 +100,50 @@ class _AppSwitcherState extends State<AppSwitcher> {
     });
   }
 
-  Widget _buildAnimatedIcon(IconData icon, int index) {
-    final bool isSelected = _selectedIndex == index;
-    return AnimatedScale(
-      scale: isSelected ? 1.3 : 1.0,
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeOutBack,
-      child: Icon(
-        icon,
-        size: 28,
-        color: isSelected
-            ? const Color.fromARGB(255, 21, 226, 106)
-            : Colors.white,
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required int index,
+    required bool isSelected,
+  }) {
+    return Expanded(
+      child: Container(
+        height: 70, // Set fixed height untuk navigation item
+        alignment: Alignment.center, // Ini yang bikin center tanpa expand
+        child: GestureDetector(
+          onTap: () => _onItemTapped(index),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFF6C63FF) : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? Colors.white : Colors.grey,
+                  size: 24,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.grey,
+                    fontSize: 12,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -145,26 +176,49 @@ class _AppSwitcherState extends State<AppSwitcher> {
 
     final pages = _role == 'admin' ? adminPages : userPages;
 
+    final navItems = [
+      {'icon': Icons.settings_outlined, 'label': 'Pengaturan'},
+      {'icon': Icons.home_outlined, 'label': 'Home'},
+      {'icon': Icons.person_outline, 'label': 'Profil'},
+      if (_role == 'admin')
+        {'icon': Icons.dashboard_outlined, 'label': 'Dashboard'},
+    ];
+
     return Scaffold(
       extendBody: true,
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 600),
         child: pages[_selectedIndex],
       ),
-      bottomNavigationBar: CurvedNavigationBar(
-        index: _selectedIndex,
-        height: 70,
-        backgroundColor: Colors.transparent,
-        color: Colors.black,
-        animationCurve: Curves.easeInOutCubic,
-        animationDuration: const Duration(milliseconds: 600),
-        items: [
-          _buildAnimatedIcon(Icons.settings, 0),
-          _buildAnimatedIcon(Icons.home, 1),
-          _buildAnimatedIcon(Icons.person, 2),
-          if (_role == 'admin') _buildAnimatedIcon(Icons.dashboard, 3),
-        ],
-        onTap: _onItemTapped,
+      bottomNavigationBar: Container(
+        margin: const EdgeInsets.all(0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: navItems.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              return _buildNavItem(
+                icon: item['icon'] as IconData,
+                label: item['label'] as String,
+                index: index,
+                isSelected: _selectedIndex == index,
+              );
+            }).toList(),
+          ),
+        ),
       ),
     );
   }

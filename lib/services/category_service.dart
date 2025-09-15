@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class CategoryService {
-  static const String baseUrl = 'https://sicegah.netlify.app/api';
+  static const String baseUrl = 'https://sicegah.vercel.app/api';
 
   // Mendapatkan daftar semua kategori
   Future<List<VideoCategory>> getCategories() async {

@@ -5,7 +5,7 @@ import '../models/auth_models.dart';
 import 'token_storage.dart';
 
 class AuthService {
-  static const String baseUrl = 'https://sicegah.netlify.app/api/auth';
+  static const String baseUrl = 'https://sicegah.vercel.app/api/auth';
 
   // Current user dari storage
   User? _currentUser;
@@ -58,15 +58,24 @@ class AuthService {
   // =======================
   // LOGIN
   // =======================
+  // Ganti method login di AuthService dengan ini:
   Future<LoginResponse> login({
     required String email,
     required String password,
   }) async {
     try {
+      print('Making request to: $baseUrl/login');
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
+      );
+
+      print('Response status: ${response.statusCode}'); // DEBUG
+      print('Response body: ${response.body}');
+      print('Making request to: $baseUrl/login');
+      print(
+        'Request body: ${jsonEncode({'email': email, 'password': password})}',
       );
 
       if (response.statusCode == 200) {
@@ -77,9 +86,10 @@ class AuthService {
         _currentUser = loginResponse.user;
         await TokenStorage.saveUser(loginResponse.user);
 
-        // Token disimpan otomatis via cookie dari backend
-        // Tapi kita juga bisa extract dari cookie header jika diperlukan
-        await _extractAndSaveToken(response);
+        // PERBAIKAN: Ambil token dari response body, bukan cookie
+        if (data['token'] != null) {
+          await TokenStorage.saveToken(data['token']);
+        }
 
         return loginResponse;
       } else {

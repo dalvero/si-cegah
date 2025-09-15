@@ -84,41 +84,6 @@ class _HomeState extends State<Home> {
     await _loadVideos();
   }
 
-  // === GREETING BERDASARKAN WAKTU ===
-  Map<String, dynamic> getGreeting() {
-    final hour = DateTime.now().hour;
-
-    if (hour >= 5 && hour < 11) {
-      return {
-        "text": "Selamat Pagi",
-        "message": "Semangat ya hari ini!",
-        "icon": Icons.wb_sunny,
-        "color": Colors.orange,
-      };
-    } else if (hour >= 11 && hour < 15) {
-      return {
-        "text": "Selamat Siang",
-        "message": "Selamat menjalankan aktivitas!",
-        "icon": Icons.wb_sunny_outlined,
-        "color": Colors.yellow[700],
-      };
-    } else if (hour >= 15 && hour < 18) {
-      return {
-        "text": "Selamat Sore",
-        "message": "Jangan lupa beristirahat ya!",
-        "icon": Icons.wb_twighlight,
-        "color": Colors.deepOrange,
-      };
-    } else {
-      return {
-        "text": "Selamat Malam",
-        "message": "Terima kasih untuk hari ini!",
-        "icon": Icons.nightlight_round,
-        "color": Colors.indigo,
-      };
-    }
-  }
-
   Widget _buildVideoList() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -208,12 +173,10 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    final greeting = getGreeting();
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(top: 60, left: 20, right: 20),
+        padding: const EdgeInsets.only(top: 40, left: 10, right: 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -255,77 +218,30 @@ class _HomeState extends State<Home> {
               'Hallo, $_userName!',
               style: const TextStyle(
                 fontSize: 20.0,
-                fontFamily: 'Poppins',
+                fontFamily: 'Mona',
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
                 letterSpacing: 2.0,
               ),
             ),
 
-            Row(
-              children: [
-                Text(
-                  '${greeting["text"]},',
-                  style: const TextStyle(
-                    fontSize: 25.0,
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.normal,
-                    letterSpacing: 2.0,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(greeting["icon"], color: greeting["color"], size: 40),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            Align(
-              alignment: Alignment.center,
-              child: Text(
-                '"${greeting["message"]}"',
-                style: const TextStyle(
-                  fontSize: 18.0,
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
             // === BANNER ===
             const BannerCarousel(),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 10),
 
             // === VIDEO LIST ===
             Align(
               alignment: Alignment.bottomCenter,
               child: Container(
                 width: double.infinity,
-                constraints: const BoxConstraints(maxHeight: 600),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color.fromARGB(255, 21, 226, 106),
-                      Color(0xFF42A5F5),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(30),
-                    topRight: Radius.circular(30),
-                  ),
-                ),
+                constraints: const BoxConstraints(maxHeight: 400),
+                decoration: const BoxDecoration(color: Colors.white),
                 child: Padding(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.all(5.0),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
                         "Video Edukasi",
@@ -333,9 +249,10 @@ class _HomeState extends State<Home> {
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'Poppins',
+                          color: Colors.black,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 0),
 
                       Flexible(child: _buildVideoList()),
                     ],

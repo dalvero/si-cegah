@@ -1,5 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Internet permissions - TAMBAHAN INI -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
      <!-- Solusi 1: Query intents for https -->
     <queries>
         <intent>
@@ -7,8 +11,6 @@
             <data android:scheme="https" />
         </intent>
     </queries>
-
-
 
     <application
         android:label="si_cegah"

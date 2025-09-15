@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:si_cegah/model/video_item.dart';
 
 class VideoService {
-  static const String baseUrl = 'https://sicegah.netlify.app/api';
+  static const String baseUrl = 'https://sicegah.vercel.app/api';
 
   // Mendapatkan daftar semua video dari API
   Future<List<VideoItem>> getVideos() async {
