@@ -13,7 +13,7 @@
     </queries>
 
     <application
-        android:label="si_cegah"
+        android:label="SiCegah Hebat"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">

@@ -115,7 +115,7 @@ class _AppSwitcherState extends State<AppSwitcher> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF6C63FF) : Colors.transparent,
+              color: isSelected ? const Color(0xFF8E97FD) : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Column(

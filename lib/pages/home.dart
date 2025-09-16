@@ -176,7 +176,7 @@ class _HomeState extends State<Home> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(top: 40, left: 10, right: 10),
+        padding: const EdgeInsets.only(top: 60, left: 10, right: 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -212,18 +212,6 @@ class _HomeState extends State<Home> {
             ),
 
             const SizedBox(height: 30),
-
-            // === GREETING ===
-            Text(
-              'Hallo, $_userName!',
-              style: const TextStyle(
-                fontSize: 20.0,
-                fontFamily: 'Mona',
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                letterSpacing: 2.0,
-              ),
-            ),
 
             // === BANNER ===
             const BannerCarousel(),

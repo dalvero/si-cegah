@@ -64,31 +64,31 @@ class AuthService {
     required String password,
   }) async {
     try {
-      print('Making request to: $baseUrl/login');
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
 
-      print('Response status: ${response.statusCode}'); // DEBUG
-      print('Response body: ${response.body}');
-      print('Making request to: $baseUrl/login');
-      print(
-        'Request body: ${jsonEncode({'email': email, 'password': password})}',
-      );
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}'); // DEBUG
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final loginResponse = LoginResponse.fromJson(data);
 
-        // Simpan user data ke storage dan memory
+        // Simpan user data
         _currentUser = loginResponse.user;
         await TokenStorage.saveUser(loginResponse.user);
 
-        // PERBAIKAN: Ambil token dari response body, bukan cookie
+        // PERBAIKAN: Ambil token langsung dari response
         if (data['token'] != null) {
           await TokenStorage.saveToken(data['token']);
+          print(
+            'Token berhasil disimpan: ${data['token'].toString().substring(0, 20)}...',
+          ); // DEBUG
+        } else {
+          print('Token tidak ditemukan di response!'); // DEBUG
         }
 
         return loginResponse;
@@ -99,6 +99,48 @@ class AuthService {
     } catch (e) {
       if (e is AuthError) rethrow;
       throw AuthError(error: 'Network error: ${e.toString()}', statusCode: 0);
+    }
+  }
+
+  Future<void> updateProfile({
+    required String name,
+    String? phone,
+    String? role,
+    String? province,
+    String? city,
+    String? address,
+  }) async {
+    try {
+      final body = <String, dynamic>{'name': name};
+
+      // Tambahkan field opsional jika ada
+      if (phone != null) body['phone'] = phone;
+      if (role != null) body['role'] = role;
+      if (province != null) body['province'] = province;
+      if (city != null) body['city'] = city;
+      if (address != null) body['address'] = address;
+
+      final response = await http.put(
+        Uri.parse('https://sicegah.vercel.app/api/users/profile'),
+        headers: await _getHeaders(),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          // Update current user
+          _currentUser = User.fromJson(data['data']);
+          await TokenStorage.saveUser(_currentUser!);
+        } else {
+          throw Exception(data['error'] ?? 'Failed to update profile');
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['error'] ?? 'Failed to update profile');
+      }
+    } catch (e) {
+      throw Exception('Network error: $e');
     }
   }
 
@@ -164,6 +206,10 @@ class AuthService {
   // Get user role
   String? getUserRole() {
     return _currentUser?.role;
+  }
+
+  Future<String?> getToken() async {
+    return await TokenStorage.getToken();
   }
 
   // Check if user has specific role

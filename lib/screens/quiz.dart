@@ -1,7 +1,8 @@
-// quiz.dart - Completely rewritten with API integration
+// quiz.dart - Improved version with better UI and no popup feedback
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'quiz_result_page.dart'; // Import the result page
 
 class QuizPage extends StatefulWidget {
   final String videoId;
@@ -29,19 +30,41 @@ class _QuizPageState extends State<QuizPage> with TickerProviderStateMixin {
   int currentQuestionIndex = 0;
   String? selectedAnswer;
   Map<String, String> userAnswers = {};
+  List<Map<String, dynamic>> detailedResults = [];
 
   late AnimationController _progressController;
   late Animation<double> _progressAnimation;
+  late AnimationController _slideController;
+  late Animation<Offset> _slideAnimation;
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _progressController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
     _progressAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _progressController, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _progressController, curve: Curves.easeOut),
+    );
+
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(1.0, 0.0), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+        );
+
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
     );
 
     _loadTest();
@@ -50,6 +73,8 @@ class _QuizPageState extends State<QuizPage> with TickerProviderStateMixin {
   @override
   void dispose() {
     _progressController.dispose();
+    _slideController.dispose();
+    _scaleController.dispose();
     super.dispose();
   }
 
@@ -57,7 +82,6 @@ class _QuizPageState extends State<QuizPage> with TickerProviderStateMixin {
     try {
       setState(() => isLoadingTest = true);
 
-      // Load test by video ID
       final testResponse = await http.get(
         Uri.parse(
           'https://sicegah.vercel.app/api/tests/by-video/${widget.videoId}',
@@ -70,13 +94,12 @@ class _QuizPageState extends State<QuizPage> with TickerProviderStateMixin {
         if (testJson['success']) {
           testData = testJson['data'];
 
-          // Create test attempt
           final attemptResponse = await http.post(
             Uri.parse('https://sicegah.vercel.app/api/test-attempts'),
             headers: {'Content-Type': 'application/json'},
             body: json.encode({
-              'userId': widget.userId,
-              'testId': testData!['id'],
+              'userId': widget.userId.trim(),
+              'testId': testData!['id'].toString(),
             }),
           );
 
@@ -86,13 +109,27 @@ class _QuizPageState extends State<QuizPage> with TickerProviderStateMixin {
             if (attemptJson['success']) {
               testAttemptId = attemptJson['data']['id'];
               _updateProgress();
+              _slideController.forward();
+            } else {
+              throw Exception(
+                'Failed to create test attempt: ${attemptJson['message']}',
+              );
             }
+          } else {
+            throw Exception(
+              'HTTP ${attemptResponse.statusCode}: ${attemptResponse.body}',
+            );
           }
+        } else {
+          throw Exception('Test not found: ${testJson['message']}');
         }
+      } else {
+        throw Exception(
+          'HTTP ${testResponse.statusCode}: ${testResponse.body}',
+        );
       }
     } catch (e) {
-      print('Error loading test: $e');
-      _showErrorDialog('Failed to load test. Please try again.');
+      _showErrorDialog('Failed to load test: $e');
     } finally {
       setState(() => isLoadingTest = false);
     }
@@ -109,6 +146,7 @@ class _QuizPageState extends State<QuizPage> with TickerProviderStateMixin {
 
     try {
       setState(() => isSubmittingAnswer = true);
+      _scaleController.forward();
 
       final question = testData!['questions'][currentQuestionIndex];
 
@@ -123,68 +161,46 @@ class _QuizPageState extends State<QuizPage> with TickerProviderStateMixin {
         }),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final responseJson = json.decode(response.body);
         if (responseJson['success']) {
           userAnswers[question['id']] = selectedAnswer!;
 
-          // Show feedback briefly
-          _showAnswerFeedback(
-            responseJson['data']['isCorrect'],
-            responseJson['data']['explanation'],
-          );
-
-          // Move to next question after showing feedback
-          Future.delayed(const Duration(seconds: 2), () {
-            if (currentQuestionIndex < (testData!['questions'].length - 1)) {
-              setState(() {
-                currentQuestionIndex++;
-                selectedAnswer =
-                    userAnswers[testData!['questions'][currentQuestionIndex]['id']];
-                _updateProgress();
-              });
-            } else {
-              _completeTest();
-            }
+          detailedResults.add({
+            'questionText': question['questionText'],
+            'options': question['options'],
+            'userAnswer': selectedAnswer,
+            'correctAnswer': question['correctAnswer'],
+            'isCorrect': responseJson['data']['isCorrect'],
+            'explanation': responseJson['data']['explanation'] ?? '',
           });
+
+          await Future.delayed(const Duration(milliseconds: 500));
+          _scaleController.reverse();
+
+          if (currentQuestionIndex < (testData!['questions'].length - 1)) {
+            // Animate to next question
+            await _slideController.reverse();
+            setState(() {
+              currentQuestionIndex++;
+              selectedAnswer = null;
+              _updateProgress();
+            });
+            _slideController.forward();
+          } else {
+            _completeTest();
+          }
+        } else {
+          throw Exception('Submit failed: ${responseJson['message']}');
         }
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('Error submitting answer: $e');
-      _showErrorDialog('Failed to submit answer. Please try again.');
+      _showErrorDialog('Failed to submit answer: $e');
     } finally {
       setState(() => isSubmittingAnswer = false);
     }
-  }
-
-  void _showAnswerFeedback(bool isCorrect, String? explanation) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(
-              isCorrect ? Icons.check_circle : Icons.cancel,
-              color: isCorrect ? Colors.green : Colors.red,
-              size: 28,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              isCorrect ? 'Benar!' : 'Salah!',
-              style: TextStyle(
-                color: isCorrect ? Colors.green : Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: explanation != null
-            ? Text(explanation, style: const TextStyle(fontSize: 14))
-            : null,
-      ),
-    );
   }
 
   Future<void> _completeTest() async {
@@ -198,86 +214,46 @@ class _QuizPageState extends State<QuizPage> with TickerProviderStateMixin {
           'https://sicegah.vercel.app/api/test-attempts/$testAttemptId/complete',
         ),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'userId': widget.userId}),
+        body: json.encode({'userId': widget.userId.trim()}),
       );
 
       if (response.statusCode == 200) {
         final responseJson = json.decode(response.body);
         if (responseJson['success']) {
-          _showResultDialog(responseJson['data']['summary']);
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => QuizResultPage(
+                summary: responseJson['data']['summary'],
+                detailedResults: detailedResults,
+                videoTitle: widget.videoTitle,
+              ),
+            ),
+          );
+        } else {
+          throw Exception('Complete test failed: ${responseJson['message']}');
         }
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('Error completing test: $e');
-      _showErrorDialog('Failed to complete test. Please try again.');
+      _showErrorDialog('Failed to complete test: $e');
     } finally {
       setState(() => isCompletingTest = false);
     }
-  }
-
-  void _showResultDialog(Map<String, dynamic> summary) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Column(
-          children: [
-            Icon(
-              summary['isPassed'] ? Icons.celebration : Icons.sentiment_neutral,
-              color: summary['isPassed'] ? Colors.green : Colors.orange,
-              size: 48,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              summary['isPassed'] ? 'Selamat!' : 'Test Selesai',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Skor Anda: ${summary['score']}%',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Benar: ${summary['correctAnswers']}/${summary['totalQuestions']}',
-            ),
-            Text('Passing Score: ${summary['passingScore']}%'),
-            if (summary['isPassed'])
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text(
-                  'Anda telah lulus test ini!',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              Navigator.of(context).pop(); // Close quiz page
-            },
-            child: const Text('Kembali'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Error'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red, size: 28),
+            SizedBox(width: 12),
+            Text('Error', style: TextStyle(color: Colors.red)),
+          ],
+        ),
         content: Text(message),
         actions: [
           TextButton(
@@ -289,65 +265,92 @@ class _QuizPageState extends State<QuizPage> with TickerProviderStateMixin {
     );
   }
 
-  void _goToPreviousQuestion() {
-    if (currentQuestionIndex > 0) {
-      setState(() {
-        currentQuestionIndex--;
-        final question = testData!['questions'][currentQuestionIndex];
-        selectedAnswer = userAnswers[question['id']];
-        _updateProgress();
-      });
-    }
-  }
-
-  void _goToNextQuestion() {
-    if (currentQuestionIndex < (testData!['questions'].length - 1)) {
-      setState(() {
-        currentQuestionIndex++;
-        final question = testData!['questions'][currentQuestionIndex];
-        selectedAnswer = userAnswers[question['id']];
-        _updateProgress();
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (isLoadingTest) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
-        appBar: AppBar(
-          title: Text('Test - ${widget.videoTitle}'),
-          backgroundColor: Colors.deepOrange,
-          elevation: 0,
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Memuat test...', style: TextStyle(fontSize: 16)),
-            ],
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xffA2D2FF), Color(0xFFFF865E), Color(0xFFFEE440)],
+            ),
+          ),
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                SizedBox(height: 24),
+                Text(
+                  'Mempersiapkan Quiz...',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
-    if (testData == null) {
+    if (testData == null ||
+        testData!['questions'] == null ||
+        (testData!['questions'] as List).isEmpty) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Test'),
-          backgroundColor: Colors.deepOrange,
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red),
-              SizedBox(height: 16),
-              Text('Test tidak ditemukan untuk video ini.'),
-            ],
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xffA2D2FF), Color(0xFFFF865E), Color(0xFFFEE440)],
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.quiz_outlined, size: 80, color: Colors.white),
+                const SizedBox(height: 24),
+                const Text(
+                  'Quiz Tidak Tersedia',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Maaf, quiz tidak ditemukan untuk video ini.',
+                  style: TextStyle(fontSize: 16, color: Colors.white70),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF6366F1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  child: const Text(
+                    'Kembali',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -358,371 +361,517 @@ class _QuizPageState extends State<QuizPage> with TickerProviderStateMixin {
     final options = currentQuestion['options'] as List;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Text('Test - ${widget.videoTitle}'),
-        backgroundColor: Colors.deepOrange,
-        elevation: 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: Text(
-                '${currentQuestionIndex + 1}/${questions.length}',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color.fromARGB(255, 54, 137, 255),
+              Color.fromARGB(255, 72, 206, 251),
+              Color(0xFFFEE440),
+            ],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Progress Bar
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Custom App Bar
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Column(
                   children: [
-                    Text(
-                      'Soal ${currentQuestionIndex + 1}',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    // Header
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Quiz Time',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                widget.videoTitle,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 14,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${currentQuestionIndex + 1}/${questions.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      '${((currentQuestionIndex + 1) / questions.length * 100).round()}%',
-                      style: const TextStyle(color: Colors.grey),
+
+                    const SizedBox(height: 24),
+
+                    // Progress Section
+                    Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Pertanyaan ${currentQuestionIndex + 1}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              '${((currentQuestionIndex + 1) / questions.length * 100).round()}% selesai',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        AnimatedBuilder(
+                          animation: _progressAnimation,
+                          builder: (context, child) {
+                            return Container(
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: FractionallySizedBox(
+                                widthFactor: _progressAnimation.value,
+                                alignment: Alignment.centerLeft,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Colors.white, Colors.white70],
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.white.withOpacity(0.5),
+                                        blurRadius: 8,
+                                        spreadRadius: 2,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                AnimatedBuilder(
-                  animation: _progressAnimation,
-                  builder: (context, child) {
-                    return LinearProgressIndicator(
-                      value: _progressAnimation.value,
-                      backgroundColor: Colors.grey[300],
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        Colors.deepOrange,
-                      ),
-                      minHeight: 6,
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
+              ),
 
-          // Question Card
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // Question
-                  Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+              // Question Content
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(32),
+                      topRight: Radius.circular(32),
                     ),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        gradient: LinearGradient(
-                          colors: [Colors.deepOrange[50]!, Colors.white],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
+                  ),
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
                       child: Column(
                         children: [
-                          CircleAvatar(
-                            backgroundColor: Colors.deepOrange,
-                            radius: 20,
-                            child: Text(
-                              "${currentQuestionIndex + 1}",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          // Drag Indicator
+                          Container(
+                            width: 40,
+                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 32),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            currentQuestion['questionText'],
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              height: 1.4,
+
+                          // Question Card
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                            textAlign: TextAlign.center,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color.fromARGB(255, 8, 219, 1),
+                                        Color.fromARGB(255, 8, 224, 1),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    "Soal ${currentQuestionIndex + 1}",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  currentQuestion['questionText'] ??
+                                      'No question text',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.5,
+                                    color: Color(0xFF1E293B),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+
+                          const SizedBox(height: 32),
+
+                          // Options
+                          ...options.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final option = entry.value.toString();
+                            final alphabet = String.fromCharCode(65 + index);
+                            final isSelected = selectedAnswer == option;
+
+                            return AnimatedBuilder(
+                              animation: _scaleAnimation,
+                              builder: (context, child) {
+                                return Transform.scale(
+                                  scale: isSelected && isSubmittingAnswer
+                                      ? _scaleAnimation.value
+                                      : 1.0,
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 16),
+                                    child: Material(
+                                      borderRadius: BorderRadius.circular(16),
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: isSubmittingAnswer
+                                            ? null
+                                            : () {
+                                                setState(() {
+                                                  selectedAnswer = option;
+                                                });
+                                              },
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(
+                                            milliseconds: 200,
+                                          ),
+                                          padding: const EdgeInsets.all(20),
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? const Color(
+                                                    0xFFFF865E,
+                                                  ).withOpacity(0.1)
+                                                : Colors.white,
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? const Color(0xFFFF865E)
+                                                  : Colors.grey.withOpacity(
+                                                      0.2,
+                                                    ),
+                                              width: isSelected ? 2 : 1,
+                                            ),
+                                            boxShadow: isSelected
+                                                ? [
+                                                    BoxShadow(
+                                                      color: const Color(
+                                                        0xFFFF865E,
+                                                      ).withOpacity(0.2),
+                                                      blurRadius: 12,
+                                                      offset: const Offset(
+                                                        0,
+                                                        4,
+                                                      ),
+                                                    ),
+                                                  ]
+                                                : [
+                                                    BoxShadow(
+                                                      color: Colors.black
+                                                          .withOpacity(0.04),
+                                                      blurRadius: 8,
+                                                      offset: const Offset(
+                                                        0,
+                                                        2,
+                                                      ),
+                                                    ),
+                                                  ],
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              AnimatedContainer(
+                                                duration: const Duration(
+                                                  milliseconds: 200,
+                                                ),
+                                                width: 48,
+                                                height: 48,
+                                                decoration: BoxDecoration(
+                                                  gradient: isSelected
+                                                      ? const LinearGradient(
+                                                          colors: [
+                                                            Color(0xFFFF865E),
+                                                            Color.fromARGB(
+                                                              255,
+                                                              246,
+                                                              145,
+                                                              112,
+                                                            ),
+                                                          ],
+                                                        )
+                                                      : null,
+                                                  color: isSelected
+                                                      ? null
+                                                      : const Color(0xFFF1F5F9),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    alphabet,
+                                                    style: TextStyle(
+                                                      color: isSelected
+                                                          ? Colors.white
+                                                          : const Color(
+                                                              0xFF64748B,
+                                                            ),
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 16),
+                                              Expanded(
+                                                child: Text(
+                                                  option,
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: isSelected
+                                                        ? FontWeight.w600
+                                                        : FontWeight.w500,
+                                                    color: isSelected
+                                                        ? const Color(
+                                                            0xFF1E293B,
+                                                          )
+                                                        : const Color(
+                                                            0xFF475569,
+                                                          ),
+                                                    height: 1.4,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (isSelected)
+                                                Container(
+                                                  padding: const EdgeInsets.all(
+                                                    4,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFFFF865E,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.check,
+                                                    color: Colors.white,
+                                                    size: 16,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          }).toList(),
+
+                          const SizedBox(height: 32),
                         ],
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // Options
-                  ...options.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final option = entry.value;
-                    final alphabet = String.fromCharCode(65 + index);
-                    final isSelected = selectedAnswer == option;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Card(
-                        elevation: isSelected ? 8 : 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: isSelected
-                                ? Colors.deepOrange
-                                : Colors.transparent,
-                            width: 2,
-                          ),
-                        ),
-                        child: InkWell(
-                          onTap: isSubmittingAnswer
-                              ? null
-                              : () {
-                                  setState(() {
-                                    selectedAnswer = option;
-                                  });
-                                },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? Colors.deepOrange
-                                        : Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      alphabet,
-                                      style: TextStyle(
-                                        color: isSelected
-                                            ? Colors.white
-                                            : Colors.black,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Text(
-                                    option,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: isSelected
-                                          ? FontWeight.w600
-                                          : FontWeight.normal,
-                                    ),
-                                  ),
-                                ),
-                                if (isSelected)
-                                  const Icon(
-                                    Icons.check_circle,
-                                    color: Colors.deepOrange,
-                                    size: 24,
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ],
-              ),
-            ),
-          ),
-
-          // Bottom Buttons
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
                 ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Submit Answer Button
-                if (selectedAnswer != null &&
-                    userAnswers[currentQuestion['id']] == null)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: isSubmittingAnswer ? null : _submitAnswer,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepOrange,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+              ),
+
+              // Bottom Action
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed:
+                            (selectedAnswer != null &&
+                                !isSubmittingAnswer &&
+                                !isCompletingTest)
+                            ? _submitAnswer
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF08CB00),
+                          disabledBackgroundColor: Colors.grey[300],
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: selectedAnswer != null ? 4 : 0,
                         ),
-                      ),
-                      child: isSubmittingAnswer
-                          ? const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
+                        child: isSubmittingAnswer || isCompletingTest
+                            ? const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
                                   ),
-                                ),
-                                SizedBox(width: 12),
-                                Text(
-                                  'Mengirim...',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
+                                  SizedBox(width: 12),
+                                  Text(
+                                    'Memproses...',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            )
-                          : const Text(
-                              'SUBMIT JAWABAN',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1,
+                                ],
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    currentQuestionIndex == questions.length - 1
+                                        ? 'Selesai Quiz'
+                                        : 'Lanjut Soal',
+                                    style: TextStyle(
+                                      color: selectedAnswer != null
+                                          ? Colors.white
+                                          : Colors.grey[600],
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    currentQuestionIndex == questions.length - 1
+                                        ? Icons.check_circle
+                                        : Icons.arrow_forward,
+                                    color: selectedAnswer != null
+                                        ? Colors.white
+                                        : Colors.grey[600],
+                                  ),
+                                ],
                               ),
-                            ),
+                      ),
                     ),
-                  ),
 
-                // Navigation Buttons (only show if answer submitted)
-                if (userAnswers[currentQuestion['id']] != null)
-                  Row(
-                    children: [
-                      // Previous Button
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: currentQuestionIndex > 0
-                              ? _goToPreviousQuestion
-                              : null,
-                          icon: Icon(
-                            Icons.arrow_back,
-                            color: currentQuestionIndex > 0
-                                ? Colors.deepOrange
-                                : Colors.grey,
-                          ),
-                          label: Text(
-                            'SEBELUMNYA',
-                            style: TextStyle(
-                              color: currentQuestionIndex > 0
-                                  ? Colors.deepOrange
-                                  : Colors.grey,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            side: BorderSide(
-                              color: currentQuestionIndex > 0
-                                  ? Colors.deepOrange
-                                  : Colors.grey,
-                            ),
-                          ),
+                    if (selectedAnswer == null)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 12),
+                        child: Text(
+                          'Silakan pilih jawaban terlebih dahulu',
+                          style: TextStyle(color: Colors.grey, fontSize: 14),
                         ),
                       ),
-
-                      const SizedBox(width: 12),
-
-                      // Next/Complete Button
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: isCompletingTest
-                              ? null
-                              : () {
-                                  if (currentQuestionIndex <
-                                      questions.length - 1) {
-                                    _goToNextQuestion();
-                                  } else {
-                                    _completeTest();
-                                  }
-                                },
-                          icon: isCompletingTest
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Icon(
-                                  currentQuestionIndex < questions.length - 1
-                                      ? Icons.arrow_forward
-                                      : Icons.check_circle,
-                                  color: Colors.white,
-                                ),
-                          label: Text(
-                            isCompletingTest
-                                ? 'MENYELESAIKAN...'
-                                : currentQuestionIndex < questions.length - 1
-                                ? 'SELANJUTNYA'
-                                : 'SELESAI',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                currentQuestionIndex < questions.length - 1
-                                ? Colors.deepOrange
-                                : Colors.green,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                // Info text
-                if (selectedAnswer == null)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Pilih jawaban terlebih dahulu',
-                      style: TextStyle(color: Colors.grey, fontSize: 14),
-                    ),
-                  ),
-              ],
-            ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

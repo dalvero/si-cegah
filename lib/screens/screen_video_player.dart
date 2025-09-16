@@ -250,7 +250,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
-                              color: Colors.grey,
+                              color: Color.fromARGB(255, 158, 158, 158),
                               fontFamily: 'Poppins',
                               letterSpacing: 1.5,
                             ),
@@ -284,7 +284,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               // Fixed Bottom Buttons (above navigation)
               Container(
                 color: Colors.white,
-                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 94.0),
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 24.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -301,10 +301,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => QuizPage(
-                                videoId: currentVideo.id, // Pass video ID
-                                userId: _userId ?? '', // Pass user ID
-                                videoTitle:
-                                    currentVideo.title, // Pass video title
+                                videoId: currentVideo.id,
+                                userId:
+                                    _userId ??
+                                    'guest-user-${DateTime.now().millisecondsSinceEpoch}',
+                                videoTitle: currentVideo.title,
                               ),
                             ),
                           );
@@ -399,37 +400,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 ),
               ),
             ],
-          ),
-          // Bottom Navigation Bar
-          bottomNavigationBar: Container(
-            margin: const EdgeInsets.all(0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: navItems.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final item = entry.value;
-                  return _buildNavItem(
-                    icon: item['icon'] as IconData,
-                    label: item['label'] as String,
-                    index: index,
-                    isSelected: _selectedNavIndex == index,
-                  );
-                }).toList(),
-              ),
-            ),
           ),
         );
       },

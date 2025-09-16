@@ -11,7 +11,11 @@ class GetStartedScreen extends StatelessWidget {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF42A5F5), Color.fromARGB(255, 21, 226, 106)],
+            colors: [
+              Color(0xFF81D4FA), // Biru langit cerah
+              Color(0xFFFFF9C4), // Kuning pucat, adem
+            ],
+
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -61,7 +65,7 @@ class GetStartedScreen extends StatelessWidget {
                 const SizedBox(height: 70),
 
                 Text(
-                  "Hai ${userName ?? 'User'}, Selamat Datang",
+                  "Selamat Datang!",
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 20,
@@ -81,10 +85,10 @@ class GetStartedScreen extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 5),
 
                 const Text(
-                  "Aplikasi edukasi gizi & pengasuhan\nuntuk cegah stunting",
+                  "Cegah stunting untuk generasi emas",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Poppins',
@@ -95,8 +99,8 @@ class GetStartedScreen extends StatelessWidget {
                 ),
 
                 // ILUSTRASI
-                Image.asset("assets/images/family.png", height: 400),
-
+                Image.asset("assets/images/starter.png", height: 400),
+                const SizedBox(height: 50),
                 // TOMBOL YUK MULAI
                 Padding(
                   padding: const EdgeInsets.symmetric(
