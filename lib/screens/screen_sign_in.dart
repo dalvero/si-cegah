@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:si_cegah/main.dart';
+import 'package:si_cegah/screens/screen_forget_password.dart';
 import 'package:si_cegah/screens/screen_get_started.dart';
 import 'package:si_cegah/screens/screen_sign_up.dart';
 import 'package:si_cegah/services/auth_service.dart';
@@ -19,6 +19,183 @@ class _SignInScreenState extends State<SignInScreen> {
   bool _isLoading = false;
   bool isPasswordVisible = false;
 
+  // POP UP ERROR
+  Future<void> _showErrorDialog(String message) async {
+    if (!mounted) return;
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "Error",
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, anim1, anim2) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        return Transform.scale(
+          scale: anim1.value,
+          child: Opacity(
+            opacity: anim1.value,
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.redAccent,
+                      size: 60,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Login Gagal",
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text(
+                          "OK",
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // POP UP SUCCES
+  Future<void> _showSuccessDialog(String message) async {
+    if (!mounted) return;
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "Success",
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, anim1, anim2) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        return Transform.scale(
+          scale: anim1.value,
+          child: Opacity(
+            opacity: anim1.value,
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: Colors.green,
+                      size: 60,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Login Berhasil",
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (context) => const GetStartedScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Lanjut",
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _signInWithEmail() async {
     setState(() {
       _isLoading = true;
@@ -31,17 +208,8 @@ class _SignInScreenState extends State<SignInScreen> {
       );
 
       if (mounted) {
-        // Navigasi ke halaman home setelah berhasil login
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const GetStartedScreen()),
-        );
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Selamat datang, ${loginResponse.user.name}!'),
-          ),
-        );
+       // SNACKBAR SUCCES
+        _showSuccessDialog('Selamat datang, ${loginResponse.user.name}!');
       }
     } on AuthError catch (e) {
       if (mounted) {
@@ -56,17 +224,11 @@ class _SignInScreenState extends State<SignInScreen> {
           default:
             message = e.error;
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        _showErrorDialog(message); // SNACKBAR ERROR
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Terjadi kesalahan. Silakan coba lagi.'),
-          ),
-        );
+        _showErrorDialog('Terjadi kesalahan. Silakan coba lagi.');
       }
     } finally {
       setState(() {
@@ -95,7 +257,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   },
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 50),
               // JUDUL
               const Text(
                 "Selamat Datang!",
@@ -187,7 +349,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           backgroundColor: Colors.lightBlueAccent,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                         onPressed: _signInWithEmail,
@@ -208,10 +370,14 @@ class _SignInScreenState extends State<SignInScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    // TODO: Implement forgot password
+                    Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const ForgetPasswordScreen(),
+                    ),
+                  );
                   },
                   child: const Text(
-                    "Forgot Password?",
+                    "Lupa Password?",
                     style: TextStyle(
                       color: Colors.black54,
                       fontFamily: 'Poppins',
@@ -229,10 +395,10 @@ class _SignInScreenState extends State<SignInScreen> {
                   );
                 },
                 child: const Text(
-                  "Belum punya akun? Daftar",
+                  "Belum punya akun? Ayo Daftar",
                   style: TextStyle(
                     fontFamily: 'Poppins',
-                    color: Colors.black54,
+                    color: Colors.blue,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

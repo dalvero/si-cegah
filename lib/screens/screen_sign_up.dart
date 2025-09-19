@@ -21,86 +21,180 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool isPasswordVisible = false;
   bool agree = false;
 
-  void _showSuccessDialog() {
-    showDialog(
+  // SUCCES POP UP
+  Future<void> _showSuccessDialog(String message) async {
+    if (!mounted) return;
+
+    showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: Text(
-            "Pendaftaran Berhasil!",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Poppins',
-            ),
-          ),
-          content: Text(
-            "Akun Anda telah berhasil dibuat. Silakan login untuk melanjutkan.",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Poppins',
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(
-                "OK",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins',
+      barrierLabel: "Success",
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, anim1, anim2) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        return Transform.scale(
+          scale: anim1.value,
+          child: Opacity(
+            opacity: anim1.value,
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: Colors.green,
+                      size: 60,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Pendaftaran Berhasil!",
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Tutup pop-up
+                          Navigator.of(context).pop(); // Kembali ke login
+                        },
+                        child: const Text(
+                          "OK",
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-                Navigator.of(context).pop(); // Back to login
-              },
             ),
-          ],
+          ),
         );
       },
     );
   }
 
-  void _showErrorDialog(String title, String message) {
-    showDialog(
+  // ERROR POP UP
+  Future<void> _showErrorDialog(String title, String message) async {
+    if (!mounted) return;
+
+    showGeneralDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Poppins',
-              color: Colors.red,
-            ),
-          ),
-          content: Text(message, style: TextStyle(fontFamily: 'Poppins')),
-          actions: <Widget>[
-            TextButton(
-              child: Text(
-                "OK",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins',
+      barrierDismissible: true,
+      barrierLabel: "Error",
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, anim1, anim2) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        return Transform.scale(
+          scale: anim1.value,
+          child: Opacity(
+            opacity: anim1.value,
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.redAccent,
+                      size: 60,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text(
+                          "OK",
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
             ),
-          ],
+          ),
         );
       },
     );
   }
 
-  // Validasi form
+  // VALIDASI FORM
   bool _validateForm() {
     if (_nameController.text.trim().isEmpty) {
       _showErrorDialog("Error", "Nama tidak boleh kosong.");
@@ -143,59 +237,44 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
-      print("🔄 Sending registration request...");
-      print(
-        "📝 Data: name=${_nameController.text}, email=${_emailController.text}, role=${_roleController}",
-      );
-
       final registerResponse = await _authService.register(
         name: _nameController.text.trim(),
         email: _emailController.text.trim().toLowerCase(),
         password: _passwordController.text,
-        role:
-            _roleController ??
-            "BIDAN", // Backend menggunakan "user" sebagai default role
+        role: _roleController ?? "BIDAN",
       );
 
-      print("✅ Registration successful: ${registerResponse.message}");
-
       if (mounted) {
-        _showSuccessDialog();
-      }
-    } on AuthError catch (e) {
-      print("❌ AuthError: ${e.error} (Status: ${e.statusCode})");
-
-      if (mounted) {
-        String message;
-        switch (e.statusCode) {
-          case 409:
-            message = 'Email sudah terdaftar. Silakan gunakan email lain.';
-            break;
-          case 400:
-            message = 'Data tidak valid. Periksa kembali input Anda.';
-            break;
-          case 422:
-            message = 'Format data tidak sesuai. Periksa email dan password.';
-            break;
-          case 500:
-            message = 'Server sedang bermasalah. Silakan coba lagi nanti.';
-            break;
-          default:
-            message = e.error.isNotEmpty
-                ? e.error
-                : 'Terjadi kesalahan pada server.';
-        }
-        _showErrorDialog("Gagal Mendaftar", message);
-      }
-    } catch (e) {
-      print("❌ Unexpected error: $e");
-
-      if (mounted) {
-        _showErrorDialog(
-          "Kesalahan Jaringan",
-          'Tidak dapat terhubung ke server. Periksa koneksi internet Anda dan coba lagi.',
+        _showSuccessDialog(
+          "Akun Anda berhasil dibuat. Silakan login untuk melanjutkan.",
         );
       }
+    } on AuthError catch (e) {
+      String message;
+      switch (e.statusCode) {
+        case 409:
+          message = 'Email sudah terdaftar. Silakan gunakan email lain.';
+          break;
+        case 400:
+          message = 'Data tidak valid. Periksa kembali input Anda.';
+          break;
+        case 422:
+          message = 'Format data tidak sesuai. Periksa email dan password.';
+          break;
+        case 500:
+          message = 'Server sedang bermasalah. Silakan coba lagi nanti.';
+          break;
+        default:
+          message = e.error.isNotEmpty
+              ? e.error
+              : 'Terjadi kesalahan pada server.';
+      }
+      _showErrorDialog("Gagal Mendaftar", message);
+    } catch (e) {
+      _showErrorDialog(
+        "Kesalahan Jaringan",
+        'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -206,7 +285,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) {    
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(

@@ -54,33 +54,22 @@ class WelcomeScreen extends StatelessWidget {
                 "assets/images/welcome.gif",
                 width: 250,
                 height: 250,                
-              ),              
+              ),                            
+
+              const SizedBox(height: 28),
 
               // JUDUL UTAMA
               Text(
-                "Cegah Stunting Sejak Dini",
+                "Sahabat Ibu Cegah Stunting untuk Generasi Hebat",
                 style: TextStyle(
                   fontFamily: 'Poppins',
-                  fontSize: 28.0,
+                  fontSize: 23.0,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
-
-              // SUBJUDUL
-              Text(
-                "Edukasi gizi & pengasuhan untuk orang tua dan kader posyandu.",
-                style: TextStyle(
-                  fontSize: 16.0,
-                  color: Colors.grey[600],
-                  fontFamily: 'Poppins',
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-
+              const SizedBox(height: 58),
               // MASUK BUTTON
               SizedBox(
                 width: double.infinity,
@@ -119,7 +108,7 @@ class WelcomeScreen extends StatelessWidget {
                   );
                 },
                 child: Text(
-                  "Belum punya akun? Daftar",                                   
+                  "Belum punya akun? Ayo Daftar",                                   
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     color: Colors.blue.shade700,
@@ -127,7 +116,6 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
             ],
           ),
         ),

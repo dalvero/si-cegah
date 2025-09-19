@@ -28,7 +28,10 @@ class _PengaturanState extends State<Pengaturan> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    // MENGGUNAKAN addPostFrameCallback UNTUK MEMASTIKAN WIDGET SUDAH SELESAI BUILD    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
   Future<void> _loadData() async {
@@ -39,7 +42,8 @@ class _PengaturanState extends State<Pengaturan> {
     try {
       setState(() => _isLoadingUser = true);
 
-      await _authService.refreshCurrentUser();
+      // PERBAIKAN: MEMAKSA REFRESH DARI SERVER, BUKAN DARI CACHE
+      await _authService.refreshCurrentUser(forceRefresh: true);
       final current = _authService.currentUser;
 
       if (mounted) {
@@ -47,7 +51,7 @@ class _PengaturanState extends State<Pengaturan> {
           _user = current;
           _userName = current?.name ?? "";
           _email = current?.email ?? "";
-          _photoUrl = null; // ganti kalau nanti ada URL foto di backend
+          _photoUrl = null;
           _isLoadingUser = false;
         });
       }
@@ -91,7 +95,7 @@ class _PengaturanState extends State<Pengaturan> {
     await _loadData();
   }
 
-  // Ambil warna avatar konsisten dari huruf depan
+  // MENGAMBIL WARNA AVATAR KONSISTEN DARI HURUF DEPAN
   final List<Color> avatarColors = [
     Colors.blue,
     Colors.green,
@@ -141,11 +145,11 @@ class _PengaturanState extends State<Pengaturan> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header dengan profil
+                // HEADER DENGAN PROFIL
                 _buildProfileHeader(),
                 const SizedBox(height: 32),
 
-                // Error message jika ada
+                // ERROR MESSAGE JIKA ADA
                 if (_errorMessage != null) ...[
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -175,7 +179,7 @@ class _PengaturanState extends State<Pengaturan> {
                   const SizedBox(height: 24),
                 ],
 
-                // Menu sections
+                // MENU SECTIONS
                 _buildSectionTitle("Akun Saya"),
                 const SizedBox(height: 16),
                 _buildProfileCard(),
@@ -424,7 +428,7 @@ class _PengaturanState extends State<Pengaturan> {
           ? _buildEmptyChildCard()
           : _buildChildDataCard(
               _children.first,
-            ), // Ambil anak pertama jika ada multiple
+            ), // MENGAMBIL ANAK PERTAMA JIKA ADA MULTIPLE
     );
   }
 
@@ -788,7 +792,6 @@ class _PengaturanState extends State<Pengaturan> {
   }
 
   // ============== DIALOG MODALS ==============
-
   Future<void> _showAddChildDialog() async {
     final nameController = TextEditingController();
     final fullNameController = TextEditingController();
@@ -923,7 +926,7 @@ class _PengaturanState extends State<Pengaturan> {
                           currentHeight: heightController.text.trim().isEmpty
                               ? null
                               : double.tryParse(heightController.text.trim()),
-                          allergies: [], // Pastikan array kosong, bukan null
+                          allergies: [], // PASTIKAN ARRAY KOSONG, BUKAN NULL
                         );
 
                         await _childService.createChild(child);
@@ -1156,7 +1159,7 @@ class _PengaturanState extends State<Pengaturan> {
     if (confirmed == true) {
       try {
         await _childService.deleteChild(child.id!);
-        Navigator.pop(context); // Close edit dialog
+        Navigator.pop(context); // CLOSE EDIT DIALOG
         _showSnackBar('Data anak berhasil dihapus');
         await _loadChildren();
       } catch (e) {
@@ -1168,9 +1171,7 @@ class _PengaturanState extends State<Pengaturan> {
   Future<void> _showEditProfileDialog() async {
     final nameController = TextEditingController(text: _userName);
     final phoneController = TextEditingController(text: _user?.phone ?? '');
-    final provinceController = TextEditingController(
-      text: _user?.province ?? '',
-    );
+    final provinceController = TextEditingController(text: _user?.province ?? '');
     final cityController = TextEditingController(text: _user?.city ?? '');
     final addressController = TextEditingController(text: _user?.address ?? '');
     String selectedRole = _user?.role?.toString().split('.').last ?? 'BIDAN';
@@ -1212,39 +1213,16 @@ class _PengaturanState extends State<Pengaturan> {
                     border: OutlineInputBorder(),
                   ),
                   items: [
-                    // Filter out ADMIN dari dropdown
-                    if (selectedRole !=
-                        'ADMIN') // Tetap tampilkan kalau user memang sudah admin
-                      const DropdownMenuItem(
-                        value: 'AYAH',
-                        child: Text('Ayah'),
-                      ),
+                    const DropdownMenuItem(value: 'AYAH', child: Text('Ayah')),
                     const DropdownMenuItem(value: 'IBU', child: Text('Ibu')),
-                    const DropdownMenuItem(
-                      value: 'PENGASUH',
-                      child: Text('Pengasuh'),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'TENAGA_KESEHATAN',
-                      child: Text('Tenaga Kesehatan'),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'KADER',
-                      child: Text('Kader'),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'BIDAN',
-                      child: Text('Bidan'),
-                    ),
-                    // Tampilkan admin hanya jika user sudah admin
+                    const DropdownMenuItem(value: 'PENGASUH', child: Text('Pengasuh')),
+                    const DropdownMenuItem(value: 'TENAGA_KESEHATAN', child: Text('Tenaga Kesehatan')),
+                    const DropdownMenuItem(value: 'KADER', child: Text('Kader')),
+                    const DropdownMenuItem(value: 'BIDAN', child: Text('Bidan')),
                     if (selectedRole == 'ADMIN')
-                      const DropdownMenuItem(
-                        value: 'ADMIN',
-                        child: Text('Admin'),
-                      ),
+                      const DropdownMenuItem(value: 'ADMIN', child: Text('Admin')),
                   ],
-                  onChanged: (value) =>
-                      setDialogState(() => selectedRole = value!),
+                  onChanged: (value) => setDialogState(() => selectedRole = value!),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -1284,41 +1262,33 @@ class _PengaturanState extends State<Pengaturan> {
                   ? null
                   : () async {
                       if (nameController.text.isEmpty) {
-                        _showSnackBar(
-                          'Nama lengkap wajib diisi',
-                          isError: true,
-                        );
+                        _showSnackBar('Nama lengkap wajib diisi', isError: true);
                         return;
                       }
 
                       setDialogState(() => isLoading = true);
 
                       try {
+                        // UPDATE PROFIL
                         await _authService.updateProfile(
                           name: nameController.text,
-                          phone: phoneController.text.isEmpty
-                              ? null
-                              : phoneController.text,
+                          phone: phoneController.text.isEmpty ? null : phoneController.text,
                           role: selectedRole,
-                          province: provinceController.text.isEmpty
-                              ? null
-                              : provinceController.text,
-                          city: cityController.text.isEmpty
-                              ? null
-                              : cityController.text,
-                          address: addressController.text.isEmpty
-                              ? null
-                              : addressController.text,
+                          province: provinceController.text.isEmpty ? null : provinceController.text,
+                          city: cityController.text.isEmpty ? null : cityController.text,
+                          address: addressController.text.isEmpty ? null : addressController.text,
                         );
 
                         Navigator.pop(context);
                         _showSnackBar('Profil berhasil diperbarui');
+
+                        // PERBAIKAN: MEREFRESH DATA SETELAH UPDATE
+                        // AuthService SUDAH OTOMATIS REFRESH DI METHOD updateProfil()
+                        // TAPI KITA TETAP REFRESH UI UNTUK MEMASTIKAN
                         await _loadUser();
+                        
                       } catch (e) {
-                        _showSnackBar(
-                          'Gagal memperbarui profil: $e',
-                          isError: true,
-                        );
+                        _showSnackBar('Gagal memperbarui profil: $e', isError: true);
                       } finally {
                         setDialogState(() => isLoading = false);
                       }

@@ -12,8 +12,9 @@ class GetStartedScreen extends StatelessWidget {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color(0xFF81D4FA), // Biru langit cerah
-              Color(0xFFFFF9C4), // Kuning pucat, adem
+                                    // NUANSA WARNA
+              Color(0xFF81D4FA),  // Biru langit cerah
+              Color(0xFFFFF9C4),  // Kuning pucat, adem
             ],
 
             begin: Alignment.topLeft,
@@ -21,8 +22,7 @@ class GetStartedScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            // ← TAMBAHKAN INI
+          child: SingleChildScrollView(            
             child: Column(
               children: [
                 const SizedBox(height: 35),
@@ -88,7 +88,7 @@ class GetStartedScreen extends StatelessWidget {
                 const SizedBox(height: 5),
 
                 const Text(
-                  "Cegah stunting untuk generasi emas",
+                  "Edukasi gizi & pengasuhan untuk orang tua dan kader posyandu.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Poppins',
@@ -112,7 +112,7 @@ class GetStartedScreen extends StatelessWidget {
                       backgroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       minimumSize: const Size(double.infinity, 55),
                     ),
@@ -122,11 +122,12 @@ class GetStartedScreen extends StatelessWidget {
                       );
                     },
                     child: const Text(
-                      "YUK MULAI!!",
+                      "Yuk Mulai Belajar!!",
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.bold,
                         color: Colors.blue,
+                        fontSize: 20
                       ),
                     ),
                   ),

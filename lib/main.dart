@@ -1,9 +1,9 @@
-// ignore_for_file: unused_import
-
+// Perbarui main.dart dengan route lupa password
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:si_cegah/screens/screen_forget_password.dart';
 import 'package:si_cegah/screens/screen_loading.dart';
+import 'package:si_cegah/screens/screen_reset_password.dart';
 import 'firebase_options.dart';
 import 'package:si_cegah/screens/screen_welcome.dart';
 import 'package:si_cegah/pages/home.dart';
@@ -11,7 +11,6 @@ import 'package:si_cegah/pages/profil.dart';
 import 'package:si_cegah/pages/pengaturan.dart';
 import 'package:si_cegah/pages/admin/dashboard.dart';
 import 'package:si_cegah/services/auth_service.dart';
-import 'package:si_cegah/models/auth_models.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +30,18 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true),
       home: const AppSwitcher(),
+      // Tambahkan routes untuk halaman lupa password
+      routes: {
+        '/forgot-password': (context) => const ForgetPasswordScreen(),
+        '/reset-password': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is String) {
+            return ResetPasswordScreen(token: args);
+          }
+          // Fallback jika tidak ada token
+          return const ForgetPasswordScreen();
+        },
+      },
     );
   }
 }
@@ -61,8 +72,8 @@ class _AppSwitcherState extends State<AppSwitcher> {
       final isLoggedIn = await _authService.isLoggedIn();
 
       if (isLoggedIn) {
-        // Refresh current user data
-        await _authService.refreshCurrentUser();
+        // Refresh current user data dengan force refresh
+        await _authService.refreshCurrentUser(forceRefresh: true);
         final user = _authService.currentUser;
 
         setState(() {

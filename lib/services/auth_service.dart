@@ -7,18 +7,23 @@ import 'token_storage.dart';
 class AuthService {
   static const String baseUrl = 'https://sicegah.vercel.app/api/auth';
 
-  // Current user dari storage
+  // MENGAMBIL USER SAAT INI DARI STORAGE
   User? _currentUser;
   User? get currentUser => _currentUser;
 
-  // Constructor - load user saat init
+  // KONSTRUKTOR CLASS UNTUK LOAD USER SAAT INIT
   AuthService() {
     _loadCurrentUser();
   }
 
-  // Load current user dari storage
+  // LOAD USER SAAT INI DARI STORAGE
   Future<void> _loadCurrentUser() async {
-    _currentUser = await TokenStorage.getUser();
+    try {
+      _currentUser = await TokenStorage.getUser();
+    } catch (e) {
+      print('Error loading current user: $e');
+      _currentUser = null;
+    }
   }
 
   // =======================
@@ -57,8 +62,7 @@ class AuthService {
 
   // =======================
   // LOGIN
-  // =======================
-  // Ganti method login di AuthService dengan ini:
+  // =======================  
   Future<LoginResponse> login({
     required String email,
     required String password,
@@ -77,11 +81,11 @@ class AuthService {
         final data = jsonDecode(response.body);
         final loginResponse = LoginResponse.fromJson(data);
 
-        // Simpan user data
+        // MENYIMPAN USER DATA
         _currentUser = loginResponse.user;
         await TokenStorage.saveUser(loginResponse.user);
 
-        // PERBAIKAN: Ambil token langsung dari response
+        // PERBAIKAN: MENGAMBIL TOKEN LANGSUNG DARI RESPONSE
         if (data['token'] != null) {
           await TokenStorage.saveToken(data['token']);
           print(
@@ -102,6 +106,9 @@ class AuthService {
     }
   }
 
+  // =======================
+  // UPDATE PROFILE
+  // =======================
   Future<void> updateProfile({
     required String name,
     String? phone,
@@ -113,7 +120,7 @@ class AuthService {
     try {
       final body = <String, dynamic>{'name': name};
 
-      // Tambahkan field opsional jika ada
+      // MENAMAHKAN FIELD OPSIONAL JIKA ADA
       if (phone != null) body['phone'] = phone;
       if (role != null) body['role'] = role;
       if (province != null) body['province'] = province;
@@ -129,9 +136,13 @@ class AuthService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
-          // Update current user
+          // MENGUPDATE USER SAAT INI
           _currentUser = User.fromJson(data['data']);
           await TokenStorage.saveUser(_currentUser!);
+          
+          // PERBAIKAN: PAKSA REFRESH DARI SERVER SETELAH UPDATE
+          await Future.delayed(const Duration(milliseconds: 300));
+          await forceRefreshFromServer();
         } else {
           throw Exception(data['error'] ?? 'Failed to update profile');
         }
@@ -144,7 +155,91 @@ class AuthService {
     }
   }
 
-  // Extract token dari cookie header (opsional, karena backend pakai HTTP-only cookie)
+  // =======================
+  // FORGOT PASSWORD
+  // =======================
+  // REQUEST PASSWORD RESET - KIRIM EMAIL DENGAN LINK RESET
+  Future<void> requestPasswordReset(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      print('Reset password response status: ${response.statusCode}');
+      print('Reset password response body: ${response.body}'); // DEBUG
+
+      if (response.statusCode == 200) {
+        // BERHASIL MENGIRIM EMAIL RESET
+        final data = jsonDecode(response.body);
+        if (data['success'] != true) {
+          throw Exception(data['message'] ?? 'Gagal mengirim email reset');
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw AuthError.fromJson(errorData, response.statusCode);
+      }
+    } catch (e) {
+      if (e is AuthError) rethrow;
+      throw AuthError(error: 'Network error: ${e.toString()}', statusCode: 0);
+    }
+  }
+
+  // RESET PASSWORD DENGAN TOKEN DARI EMAIL
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'token': token,
+          'password': newPassword,
+        }),
+      );
+
+      print('Reset password confirm status: ${response.statusCode}');
+      print('Reset password confirm body: ${response.body}'); // DEBUG
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] != true) {
+          throw Exception(data['message'] ?? 'Gagal mereset password');
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw AuthError.fromJson(errorData, response.statusCode);
+      }
+    } catch (e) {
+      if (e is AuthError) rethrow;
+      throw AuthError(error: 'Network error: ${e.toString()}', statusCode: 0);
+    }
+  }
+
+  /// VEFIGIKASI TOKEN RESET PASSWORD (OPSIONAL - UNTUK CEK VALIDITAS TOKEN)
+  Future<bool> verifyResetToken(String token) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/verify-reset-token'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'token': token}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['success'] == true && data['valid'] == true;
+      }
+      return false;
+    } catch (e) {
+      print('Error verifying reset token: $e');
+      return false;
+    }
+  }
+
+  // MENGEKSTRAK TOKEN DARI COOKIE HEADER (opsional, karena backend pakai HTTP-only cookie)
   Future<void> _extractAndSaveToken(http.Response response) async {
     final cookies = response.headers['set-cookie'];
     if (cookies != null) {
@@ -163,16 +258,16 @@ class AuthService {
   // =======================
   Future<void> logout() async {
     try {
-      // Panggil API logout jika ada
+      // MEMANGGIL API LOGOUT JIKA ADA
       await http.post(
         Uri.parse('$baseUrl/logout'),
         headers: await _getHeaders(),
       );
     } catch (e) {
-      // Tetap lanjut logout meski API error
+      // TETAP LANJUT LOGOUT MESKI API ERROR
       print('Logout API error: $e');
     } finally {
-      // Clear local data
+      // CLEAR LOCAL DATA
       _currentUser = null;
       await TokenStorage.clearAuth();
     }
@@ -181,49 +276,125 @@ class AuthService {
   // =======================
   // UTILITY FUNCTIONS
   // =======================
-
-  // Cek apakah user sudah login
+  // MENGECEK APAKAH USER SUDAH LOGIN
   Future<bool> isLoggedIn() async {
-    final hasToken = await TokenStorage.isLoggedIn();
-    final hasUser = await TokenStorage.getUser() != null;
-    return hasToken && hasUser;
+    try {
+      final hasToken = await TokenStorage.isLoggedIn();
+      final hasUser = await TokenStorage.getUser() != null;
+      return hasToken && hasUser;
+    } catch (e) {
+      print('Error checking login status: $e');
+      return false;
+    }
   }
 
-  // Get headers dengan token untuk request yang butuh auth
+  // MENDAPATKAN HEADERS DENGAN TOKEN UNTUK REQUEST YANG BUTUH AUTH
   Future<Map<String, String>> _getHeaders() async {
-    final token = await TokenStorage.getToken();
-    return {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
+    try {
+      final token = await TokenStorage.getToken();
+      return {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+    } catch (e) {
+      print('Error getting headers: $e');
+      return {'Content-Type': 'application/json'};
+    }
   }
 
-  // Refresh current user data
-  Future<void> refreshCurrentUser() async {
-    await _loadCurrentUser();
-  }
-
-  // Get user role
+  // MENDAPATKAN USER ROLE
   String? getUserRole() {
     return _currentUser?.role;
   }
 
   Future<String?> getToken() async {
-    return await TokenStorage.getToken();
+    try {
+      return await TokenStorage.getToken();
+    } catch (e) {
+      print('Error getting token: $e');
+      return null;
+    }
   }
 
-  // Check if user has specific role
+  // MENGECEK APAKAH USER MEMILIKI ROLE YANG SPESIFIK
   bool hasRole(String role) {
     return _currentUser?.role == role;
   }
 
-  // Check if user is admin
+  // MENGECEK APAKAH USER ADMIN?
   bool isAdmin() {
-    return hasRole('admin');
+    return hasRole('ADMIN');
   }
 
-  // Check if user is regular user
+  // MENGECEK APAKAH USER ADALAH USER BIASA?
   bool isUser() {
     return hasRole('user');
   }
+
+  // =======================
+  // REFRESH USER FROM SERVER
+  // =======================
+  Future<void> refreshCurrentUser({bool forceRefresh = false}) async {
+    try {
+      if (forceRefresh) {
+        // MEMBERSIHKAN CACHE LOCAL TERLEBIH DAHULU
+        _currentUser = null;
+      }
+      
+      // FETCH DATA TERBARU DARI SERVER
+      final response = await http.get(
+        Uri.parse('https://sicegah.vercel.app/api/users/profile'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          // MENGUPDATE USER SAAT INI DENGAN DATA TERBARU DARI SERVER
+          _currentUser = User.fromJson(data['data']);
+          await TokenStorage.saveUser(_currentUser!);
+        } else {
+          // FALLBACK KE DATA DARI STORAGE JIKA API GAGAL
+          await _loadCurrentUser();
+        }
+      } else {
+        // FALLBACK KE DATA DARI STORAGE JIKA API GAGAL
+        await _loadCurrentUser();
+      }
+    } catch (e) {
+      print('Error refreshing user: $e');
+      // FALLBACK KE DATA DARI STORAGE JIKA ERROR
+      await _loadCurrentUser();
+    }
+  }
+
+  // =======================
+  // CLEAR CACHE
+  // =======================
+  Future<void> clearUserCache() async {
+    _currentUser = null;
+  }
+
+  // =======================
+  // FORCE REFRESH DATA
+  // =======================
+  Future<void> forceRefreshFromServer() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://sicegah.vercel.app/api/users/profile'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          _currentUser = User.fromJson(data['data']);
+          await TokenStorage.saveUser(_currentUser!);
+        }
+      }
+    } catch (e) {
+      print('Error force refreshing user: $e');
+      // TIDAK THROW ERROR AGAR TIDAK CRASH APP
+    }
+  }  
 }
