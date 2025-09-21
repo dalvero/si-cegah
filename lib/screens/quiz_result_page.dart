@@ -1,4 +1,4 @@
-// quiz_result_page.dart - Improved version with better data handling
+// quiz_result_page.dart - Updated with celebration data return
 import 'package:flutter/material.dart';
 
 class QuizResultPage extends StatelessWidget {
@@ -37,6 +37,18 @@ class QuizResultPage extends StatelessWidget {
     if (score >= 80) return Colors.lightGreen;
     if (score >= 70) return Colors.orange;
     return Colors.red;
+  }
+
+  List<String> _getAchievementsUnlocked(int score) {
+    List<String> achievements = [];
+    if (score == 100) {
+      achievements.addAll(['Sempurna', 'Master Quiz']);
+    } else if (score >= 90) {
+      achievements.add('Hampir Sempurna');
+    } else if (score >= 80) {
+      achievements.add('Bagus');
+    }
+    return achievements;
   }
 
   @override
@@ -310,15 +322,38 @@ class QuizResultPage extends StatelessWidget {
 
                     if (!isPassed) const SizedBox(width: 12),
 
-                    // Continue Button
+                    // Continue Button - UPDATED WITH CELEBRATION DATA
                     Expanded(
                       flex: isPassed ? 1 : 1,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          // Navigate back to home/course page
-                          Navigator.of(
-                            context,
-                          ).popUntil((route) => route.isFirst);
+                          // Create celebration data for passed quiz
+                          if (isPassed) {
+                            final celebrationData = {
+                              'message': 'Test berhasil diselesaikan!',
+                              'starRating': score >= 90
+                                  ? 5
+                                  : score >= 80
+                                  ? 4
+                                  : 3,
+                              'achievementsUnlocked': _getAchievementsUnlocked(
+                                score,
+                              ),
+                              'isPassed': isPassed,
+                              'score': score,
+                              'videoTitle': videoTitle,
+                            };
+
+                            Navigator.of(context).pop(); // Pop quiz result
+                            Navigator.of(
+                              context,
+                            ).pop(celebrationData); // Pop to home with data
+                          } else {
+                            // Just go back to home without celebration
+                            Navigator.of(
+                              context,
+                            ).popUntil((route) => route.isFirst);
+                          }
                         },
                         icon: Icon(
                           isPassed ? Icons.play_arrow : Icons.home,

@@ -1,4 +1,4 @@
-// screen_video_player.dart - Updated version
+// screen_video_player.dart - Fixed version with proper null handling
 import 'package:flutter/material.dart';
 import 'package:si_cegah/services/video_service.dart';
 import 'package:si_cegah/services/auth_service.dart';
@@ -23,52 +23,128 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   late int currentIndex;
   List<VideoItem> videos = [];
   bool isLoading = true;
+  bool isUserLoading = true;
 
   // Bottom navigation state
   int _selectedNavIndex = 1; // Default ke Home
   String? _userRole;
-  String? _userId; // Added userId
+  String? _userId;
   final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
-    _loadVideos();
-    _getUserRole();
+    _initializeScreen();
   }
 
-  void _getUserRole() async {
-    final user = _authService.currentUser;
-    print('DEBUG - Current user: $user');
-    print('DEBUG - User ID: ${user?.id}');
-    print('DEBUG - User role: ${user?.role}');
+  Future<void> _initializeScreen() async {
+    await _getUserRole();
+    await _loadVideos();
+  }
 
-    setState(() {
-      _userRole = user?.role ?? 'user';
-      _userId = user?.id;
+  Future<void> _getUserRole() async {
+    try {
+      // Coba refresh/check user session terlebih dahulu
+      await _authService.refreshUserSession();
+
+      final user = _authService.currentUser;
+      print('DEBUG - Current user after refresh: $user');
+      print('DEBUG - User ID: ${user?.id}');
+      print('DEBUG - User role: ${user?.role}');
+
+      setState(() {
+        _userRole = user?.role ?? 'user';
+        _userId = user?.id;
+        isUserLoading = false;
+      });
+
+      // Jika user masih null, mungkin perlu redirect ke login
+      if (user == null) {
+        print('WARNING - User is null, might need to redirect to login');
+        // Anda bisa menampilkan dialog atau redirect ke login
+        _showLoginPrompt();
+      }
+    } catch (e) {
+      print('ERROR - Failed to get user role: $e');
+      setState(() {
+        _userRole = 'user'; // Default fallback
+        _userId = null;
+        isUserLoading = false;
+      });
+      _showLoginPrompt();
+    }
+  }
+
+  void _showLoginPrompt() {
+    // Tampilkan dialog atau snackbar untuk login
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Session expired. Please login again.'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'LOGIN',
+              textColor: Colors.white,
+              onPressed: () {
+                // Navigate to login page
+                // Navigator.pushReplacementNamed(context, '/login');
+              },
+            ),
+          ),
+        );
+      }
     });
   }
 
-  void _loadVideos() async {
-    videos = await VideoService().getVideos();
-    currentIndex = videos.indexWhere(
-      (v) => v.videoUrl == widget.video.videoUrl,
-    );
+  Future<void> _loadVideos() async {
+    try {
+      videos = await VideoService().getVideos();
+      currentIndex = videos.indexWhere(
+        (v) => v.videoUrl == widget.video.videoUrl,
+      );
 
-    final videoId = YoutubePlayer.convertUrlToId(videos[currentIndex].videoUrl);
-    _controller = YoutubePlayerController(
-      initialVideoId: videoId ?? '',
-      flags: const YoutubePlayerFlags(
-        autoPlay: true,
-        mute: false,
-        enableCaption: false,
-        forceHD: true,
-      ),
-    );
+      if (currentIndex == -1) {
+        currentIndex = 0; // Fallback jika video tidak ditemukan
+      }
 
-    setState(() {
-      isLoading = false;
-    });
+      final videoId = YoutubePlayer.convertUrlToId(
+        videos[currentIndex].videoUrl,
+      );
+      if (videoId != null) {
+        _controller = YoutubePlayerController(
+          initialVideoId: videoId,
+          flags: const YoutubePlayerFlags(
+            autoPlay: true,
+            mute: false,
+            enableCaption: false,
+            forceHD: true,
+          ),
+        );
+      } else {
+        throw Exception('Invalid video URL');
+      }
+
+      setState(() {
+        isLoading = false;
+      });
+    } catch (e) {
+      print('ERROR - Failed to load videos: $e');
+      setState(() {
+        isLoading = false;
+      });
+
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load videos: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _playPreviousVideo() {
@@ -174,16 +250,90 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
   }
 
+  void _handleQuizNavigation() {
+    final currentUser = _authService.currentUser;
+
+    if (currentUser == null) {
+      // Show login prompt
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Login Required'),
+            content: const Text('You need to login to access quiz features.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Navigate to login page
+                  // Navigator.pushNamed(context, '/login');
+                },
+                child: const Text('Login'),
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
+    // Navigate to quiz
+    final currentVideo = videos[currentIndex];
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuizPage(
+          videoId: currentVideo.id,
+          userId: currentUser.id,
+          videoTitle: currentVideo.title,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
-    _controller.dispose();
+    if (!isLoading) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (isLoading || isUserLoading) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading video...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (videos.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Video Player')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text('No videos available'),
+            ],
+          ),
+        ),
+      );
     }
 
     final currentVideo = videos[currentIndex];
@@ -269,7 +419,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Text(
-                          videos[currentIndex].description,
+                          currentVideo.description,
                           textAlign: TextAlign.justify,
                           softWrap: true,
                           overflow: TextOverflow.visible,
@@ -296,28 +446,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          debugPrint(
-                            'Latihan soal diaktifkan untuk video: ${currentVideo.id}',
-                          );
-                          // Navigate ke halaman quiz dengan videoId dan userId
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => QuizPage(
-                                videoId: currentVideo.id,
-                                userId:
-                                    _userId ??
-                                    'guest-user-${DateTime.now().millisecondsSinceEpoch}',
-                                videoTitle: currentVideo.title,
-                              ),
-                            ),
-                          );
-                        },
+                        onPressed: _handleQuizNavigation,
                         icon: const Icon(Icons.quiz, color: Colors.white),
-                        label: const Text(
-                          "LATIHAN SOAL",
-                          style: TextStyle(
+                        label: Text(
+                          _userId != null ? "LATIHAN SOAL" : "LOGIN FOR QUIZ",
+                          style: const TextStyle(
                             color: Colors.white,
                             fontFamily: 'Poppins',
                             fontSize: 18,
@@ -326,7 +459,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4A90E2),
+                          backgroundColor: _userId != null
+                              ? const Color(0xFF4A90E2)
+                              : Colors.orange,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

@@ -26,6 +26,154 @@ class AuthService {
     }
   }
 
+  Future<void> refreshUserSession() async {
+    try {
+      print('DEBUG - Refreshing user session...');
+
+      // 1. Cek apakah ada token tersimpan
+      final token = await TokenStorage.getToken();
+      if (token == null) {
+        print('DEBUG - No token found, clearing user');
+        _currentUser = null;
+        return;
+      }
+
+      // 2. Coba load user dari storage dulu
+      await _loadCurrentUser();
+
+      // 3. Jika user masih null, coba fetch dari server
+      if (_currentUser == null) {
+        print('DEBUG - User null, trying to fetch from server...');
+        await _fetchUserFromServer();
+      }
+
+      // 4. Validasi token dengan server (opsional tapi recommended)
+      await _validateTokenWithServer();
+
+      print('DEBUG - Session refresh completed. User: ${_currentUser?.name}');
+    } catch (e) {
+      print('ERROR - Failed to refresh user session: $e');
+      // Jika error, clear session untuk safety
+      await _clearInvalidSession();
+    }
+  }
+
+  /// METHOD UNTUK FETCH USER DARI SERVER KETIKA LOCAL STORAGE KOSONG
+  Future<void> _fetchUserFromServer() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://sicegah.vercel.app/api/users/profile'),
+        headers: await _getHeaders(),
+      );
+
+      print('DEBUG - Fetch user response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          _currentUser = User.fromJson(data['data']);
+          await TokenStorage.saveUser(_currentUser!);
+          print('DEBUG - User fetched and saved: ${_currentUser?.name}');
+        } else {
+          throw Exception('Invalid response from server');
+        }
+      } else if (response.statusCode == 401) {
+        // Token tidak valid
+        throw Exception('Token expired or invalid');
+      } else {
+        throw Exception('Server error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('ERROR - Failed to fetch user from server: $e');
+      throw e;
+    }
+  }
+
+  /// METHOD UNTUK VALIDASI TOKEN DENGAN SERVER
+  Future<bool> _validateTokenWithServer() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://sicegah.vercel.app/api/auth/validate-token'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final isValid = data['success'] == true && data['valid'] == true;
+
+        if (!isValid) {
+          print('DEBUG - Token is invalid, clearing session');
+          await _clearInvalidSession();
+        }
+
+        return isValid;
+      } else {
+        // Assume token invalid jika endpoint tidak bisa diakses
+        print('DEBUG - Cannot validate token, status: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('ERROR - Token validation failed: $e');
+      // Jangan clear session jika hanya network error
+      return true; // Assume valid untuk avoid false logout
+    }
+  }
+
+  /// METHOD UNTUK CLEAR SESSION YANG TIDAK VALID
+  Future<void> _clearInvalidSession() async {
+    try {
+      print('DEBUG - Clearing invalid session');
+      _currentUser = null;
+      await TokenStorage.clearAuth();
+    } catch (e) {
+      print('ERROR - Failed to clear invalid session: $e');
+    }
+  }
+
+  /// METHOD UNTUK CEK APAKAH SESSION MASIH VALID
+  Future<bool> isSessionValid() async {
+    try {
+      // 1. Cek apakah ada token
+      final hasToken = await TokenStorage.isLoggedIn();
+      if (!hasToken) return false;
+
+      // 2. Cek apakah ada user
+      if (_currentUser == null) {
+        await _loadCurrentUser();
+      }
+
+      // 3. Return true jika user ada
+      return _currentUser != null;
+    } catch (e) {
+      print('ERROR - Session validation failed: $e');
+      return false;
+    }
+  }
+
+  /// METHOD UNTUK FORCE LOGIN CHECK - DIGUNAKAN UNTUK UI STATE
+  Future<bool> requireLogin() async {
+    try {
+      await refreshUserSession();
+      return _currentUser != null;
+    } catch (e) {
+      print('ERROR - Require login failed: $e');
+      return false;
+    }
+  }
+
+  /// METHOD UNTUK GET USER ID DENGAN SAFETY CHECK
+  String? getCurrentUserId() {
+    return _currentUser?.id;
+  }
+
+  /// METHOD UNTUK GET USER DENGAN REFRESH JIKA PERLU
+  Future<User?> getCurrentUserWithRefresh() async {
+    if (_currentUser == null) {
+      await refreshUserSession();
+    }
+    return _currentUser;
+  }
+
   // =======================
   // REGISTER
   // =======================

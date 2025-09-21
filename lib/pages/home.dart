@@ -1,6 +1,4 @@
-// home.dart (modifikasi untuk API)
-// ignore_for_file: unused_field
-
+// home.dart - Updated dengan user context untuk star rating
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:si_cegah/models/auth_models.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +8,7 @@ import 'package:si_cegah/widget/video_card.dart';
 import 'package:si_cegah/model/video_item.dart';
 import 'package:si_cegah/services/video_service.dart';
 import 'package:si_cegah/screens/screen_video_player.dart';
+import 'package:si_cegah/widget/celebration_snackbar.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -20,14 +19,11 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final VideoService _videoService = VideoService();
-
-  // MENDAPATKAN USER NAME
   final AuthService _authService = AuthService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   User? _user;
   String _userName = "Memuat...";
-
-  // State untuk videos
   List<VideoItem> _videos = [];
   bool _isLoading = false;
   String? _error;
@@ -37,7 +33,7 @@ class _HomeState extends State<Home> {
     super.initState();
     _user = _authService.currentUser;
     _fetchUserProfile();
-    _loadVideos(); // Load videos once
+    _loadVideos();
   }
 
   Future<void> _fetchUserProfile() async {
@@ -46,13 +42,14 @@ class _HomeState extends State<Home> {
         _userName = _user!.name;
       });
     } else {
+      await _authService.refreshCurrentUser();
+      _user = _authService.currentUser;
       setState(() {
         _userName = "Pengguna";
       });
     }
   }
 
-  // Load videos from API
   Future<void> _loadVideos() async {
     if (!mounted) return;
 
@@ -79,9 +76,32 @@ class _HomeState extends State<Home> {
     }
   }
 
-  // Refresh videos
   Future<void> _refreshVideos() async {
     await _loadVideos();
+  }
+
+  // Show celebration snackbar when returned from quiz completion
+  void _showCelebrationFromQuiz(Map<String, dynamic> celebrationData) {
+    final message = celebrationData['message'] ?? 'Test selesai!';
+    final starRating = celebrationData['starRating'] ?? 0;
+    final achievementsUnlocked = List<String>.from(
+      celebrationData['achievementsUnlocked'] ?? [],
+    );
+    final isPassed = celebrationData['isPassed'] ?? false;
+    final score = celebrationData['score'] ?? 0;
+    final videoTitle = celebrationData['videoTitle'] ?? '';
+
+    String finalMessage = message;
+    if (isPassed) {
+      finalMessage = 'Selamat! Kamu lulus test "$videoTitle" dengan $score%!';
+    }
+
+    CelebrationSnackbar.show(
+      context,
+      message: finalMessage,
+      starRating: starRating,
+      achievementsUnlocked: achievementsUnlocked,
+    );
   }
 
   Widget _buildVideoList() {
@@ -133,36 +153,48 @@ class _HomeState extends State<Home> {
           return Container(
             margin: const EdgeInsets.only(bottom: 16.0),
             child: VideoCard(
+              key: ValueKey('${video.id}-${_videos.hashCode}'),
               title: video.title,
               category: video.category,
               duration: video.duration,
               thumbnail: thumbnailUrl,
               description: video.description,
+              videoId: video.id, // TAMBAHAN: Pass video ID
+              userId: _user?.id, // TAMBAHAN: Pass user ID for star rating
               rating: double.tryParse(video.rating) ?? 0.0,
-              onTap: () {
-                Navigator.of(context).push(
-                  PageRouteBuilder(
-                    transitionDuration: const Duration(milliseconds: 500),
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        VideoPlayerScreen(video: video),
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                          const begin = Offset(1.0, 0.0);
-                          const end = Offset.zero;
-                          const curve = Curves.easeInOut;
+              onTap: () async {
+                // Navigate to VideoPlayerScreen and wait for result
+                final result = await Navigator.of(context)
+                    .push<Map<String, dynamic>>(
+                      PageRouteBuilder(
+                        transitionDuration: const Duration(milliseconds: 500),
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            VideoPlayerScreen(video: video),
+                        transitionsBuilder:
+                            (context, animation, secondaryAnimation, child) {
+                              const begin = Offset(1.0, 0.0);
+                              const end = Offset.zero;
+                              const curve = Curves.easeInOut;
 
-                          var tween = Tween(
-                            begin: begin,
-                            end: end,
-                          ).chain(CurveTween(curve: curve));
+                              var tween = Tween(
+                                begin: begin,
+                                end: end,
+                              ).chain(CurveTween(curve: curve));
 
-                          return SlideTransition(
-                            position: animation.drive(tween),
-                            child: child,
-                          );
-                        },
-                  ),
-                );
+                              return SlideTransition(
+                                position: animation.drive(tween),
+                                child: child,
+                              );
+                            },
+                      ),
+                    );
+
+                // If celebration data returned from quiz completion
+                if (result != null && result.containsKey('message')) {
+                  _showCelebrationFromQuiz(result);
+                  // Refresh video list to update star ratings
+                  _refreshVideos();
+                }
               },
             ),
           );
@@ -241,7 +273,6 @@ class _HomeState extends State<Home> {
                         ),
                       ),
                       const SizedBox(height: 0),
-
                       Flexible(child: _buildVideoList()),
                     ],
                   ),

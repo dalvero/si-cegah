@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:si_cegah/services/auth_service.dart';
+import 'package:si_cegah/services/user_service.dart';
 import 'package:si_cegah/models/auth_models.dart';
 
 class Profile extends StatefulWidget {
@@ -23,10 +24,46 @@ class _ProfileState extends State<Profile> {
   bool _isLoading = false;
   bool _isProfileLoading = true;
 
+  // Achievement data
+  Map<String, dynamic>? _achievements;
+  bool _isAchievementsLoading = true;
+  int _completedVideos = 0;
+  int _totalStars = 0;
+
   @override
   void initState() {
     super.initState();
     _fetchUserProfile();
+    _fetchUserAchievements();
+  }
+
+  Future<void> _fetchUserAchievements() async {
+    if (_authService.currentUser == null) return;
+
+    setState(() {
+      _isAchievementsLoading = true;
+    });
+
+    try {
+      final achievements = await UserService.getUserAchievements(
+        _authService.currentUser!.id,
+      );
+      if (mounted && achievements != null) {
+        setState(() {
+          _achievements = achievements;
+          _completedVideos = achievements['completedVideos'] ?? 0;
+          _totalStars = achievements['totalStars'] ?? 0;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching achievements: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAchievementsLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _fetchUserProfile() async {
@@ -55,7 +92,7 @@ class _ProfileState extends State<Profile> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal memuat profil: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: const Color(0xFFE53E3E),
             duration: const Duration(seconds: 3),
           ),
         );
@@ -90,57 +127,96 @@ class _ProfileState extends State<Profile> {
     }
   }
 
+  // Achievement badge logic dengan warna yang lebih soft
+  Map<String, dynamic> _getCurrentBadge() {
+    if (_completedVideos >= 5) {
+      return {
+        'title': 'Expert',
+        'subtitle': 'Semua Video Selesai',
+        'icon': Icons.military_tech,
+        'color': const Color(0xFF2D3748),
+        'bgColor': const Color(0xFFF7FAFC),
+        'accentColor': const Color(0xFF4299E1),
+      };
+    } else if (_completedVideos >= 3) {
+      return {
+        'title': 'Advanced',
+        'subtitle': '$_completedVideos dari 5 Video',
+        'icon': Icons.school,
+        'color': const Color(0xFF2D3748),
+        'bgColor': const Color(0xFFF7FAFC),
+        'accentColor': const Color(0xFF48BB78),
+      };
+    } else if (_completedVideos >= 1) {
+      return {
+        'title': 'Explorer',
+        'subtitle': '$_completedVideos dari 5 Video',
+        'icon': Icons.explore,
+        'color': const Color(0xFF2D3748),
+        'bgColor': const Color(0xFFF7FAFC),
+        'accentColor': const Color(0xFFED8936),
+      };
+    } else {
+      return {
+        'title': 'Starter',
+        'subtitle': 'Mulai Belajar',
+        'icon': Icons.rocket_launch,
+        'color': const Color(0xFF2D3748),
+        'bgColor': const Color(0xFFF7FAFC),
+        'accentColor': const Color(0xFF718096),
+      };
+    }
+  }
+
+  double _getProgressPercentage() {
+    return (_completedVideos / 5).clamp(0.0, 1.0);
+  }
+
   Future<void> _handleLogout() async {
     final shouldLogout = await showDialog<bool>(
       context: context,
-      barrierDismissible: false, // Prevent dismissing by tapping outside
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(12),
           ),
           title: const Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+              Icon(Icons.logout, color: Color(0xFFE53E3E), size: 20),
               SizedBox(width: 8),
               Text(
                 "Konfirmasi Logout",
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins',
-                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: Color(0xFF2D3748),
                 ),
               ),
             ],
           ),
           content: const Text(
-            "Apakah Anda yakin ingin keluar dari aplikasi? Anda perlu login kembali untuk mengakses fitur aplikasi.",
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 14),
+            "Apakah Anda yakin ingin keluar dari aplikasi?",
+            style: TextStyle(fontSize: 14, color: Color(0xFF4A5568)),
           ),
           actions: [
             TextButton(
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-              ),
               child: const Text(
                 "Batal",
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins',
-                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF718096),
                 ),
               ),
               onPressed: () => Navigator.of(context).pop(false),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+            TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFFE53E3E),
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
+                  horizontal: 16,
+                  vertical: 8,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -148,11 +224,7 @@ class _ProfileState extends State<Profile> {
               ),
               child: const Text(
                 "Logout",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins',
-                  color: Colors.white,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w500),
               ),
               onPressed: () => Navigator.of(context).pop(true),
             ),
@@ -178,18 +250,17 @@ class _ProfileState extends State<Profile> {
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.white),
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.white,
+                    size: 16,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(child: Text('Gagal logout: ${e.toString()}')),
                 ],
               ),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-              action: SnackBarAction(
-                label: 'Coba Lagi',
-                textColor: Colors.white,
-                onPressed: () => _handleLogout(),
-              ),
+              backgroundColor: const Color(0xFFE53E3E),
+              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -204,35 +275,156 @@ class _ProfileState extends State<Profile> {
   }
 
   Future<void> _handleRefresh() async {
-    await _fetchUserProfile();
+    await Future.wait([_fetchUserProfile(), _fetchUserAchievements()]);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Mendapatkan tinggi bottom navigation (biasanya 56-80px)
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    const navBarHeight = 20.0; // Sesuaikan dengan tinggi nav bar Anda
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFFF7FAFC),
       body: RefreshIndicator(
+        color: const Color(0xFF4299E1),
         onRefresh: _handleRefresh,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
               _buildHeader(context),
-              const SizedBox(height: 30),
+
+              // Achievement Badge - compact design
+              if (!_isAchievementsLoading) _buildCompactAchievementBadge(),
+
+              const SizedBox(height: 24),
+
               if (_isProfileLoading)
                 _buildLoadingSection()
               else
                 _buildProfileInfo(),
-              const SizedBox(height: 30),
+
+              const SizedBox(height: 24),
               _buildLogoutButton(),
-              // Padding ekstra untuk menghindari bottom navigation
-              SizedBox(height: navBarHeight + bottomPadding + 20),
+              SizedBox(height: bottomPadding + 24),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactAchievementBadge() {
+    final badge = _getCurrentBadge();
+    final progress = _getProgressPercentage();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(top: 16),
+        decoration: BoxDecoration(
+          color: badge['bgColor'],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: badge['accentColor'].withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF000000).withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Icon container
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: badge['accentColor'].withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(badge['icon'], color: badge['accentColor'], size: 24),
+            ),
+
+            const SizedBox(width: 16),
+
+            // Text content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    badge['title'],
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: badge['color'],
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    badge['subtitle'],
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF718096),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Progress indicator
+            Container(
+              width: 44,
+              height: 44,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: CircularProgressIndicator(
+                      value: progress,
+                      strokeWidth: 4,
+                      backgroundColor: badge['accentColor'].withOpacity(0.1),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        badge['accentColor'],
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '$_completedVideos',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: badge['color'],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            // Stars
+            Row(
+              children: [
+                Icon(Icons.star, color: badge['accentColor'], size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  '$_totalStars',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: badge['color'],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -244,104 +436,93 @@ class _ProfileState extends State<Profile> {
         : '?';
 
     return Container(
-      height: 300,
+      height: 240,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF42A5F5), Color.fromARGB(255, 21, 195, 226)],
+          colors: [Color(0xFF4299E1), Color(0xFF3182CE)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(35),
-          bottomRight: Radius.circular(35),
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
         ),
       ),
       child: Stack(
         children: [
-          Positioned(
-            top: 120,
-            left: -30,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
           // Back button
           Positioned(
-            top: 50,
+            top: MediaQuery.of(context).padding.top + 12,
             left: 20,
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                borderRadius: BorderRadius.circular(25),
+                borderRadius: BorderRadius.circular(20),
                 onTap: () => Navigator.pop(context),
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(25),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Icon(
                     Icons.arrow_back,
                     color: Colors.white,
-                    size: 24,
+                    size: 20,
                   ),
                 ),
               ),
             ),
           ),
+
           // Profile info
           Positioned(
-            bottom: 40,
+            bottom: 32,
             left: 0,
             right: 0,
             child: Column(
               children: [
-                Hero(
-                  tag: 'profile_avatar',
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 45,
-                      backgroundColor: Colors.white,
-                      child: Text(
-                        initial,
-                        style: const TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF42A5F5),
-                        ),
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 36,
+                    backgroundColor: Colors.white,
+                    child: Text(
+                      initial,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF4299E1),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+
+                const SizedBox(height: 12),
+
                 Text(
                   _userName,
                   style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
                     color: Colors.white,
                   ),
                   textAlign: TextAlign.center,
                 ),
+
                 const SizedBox(height: 4),
+
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -349,14 +530,13 @@ class _ProfileState extends State<Profile> {
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
                     _peran,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.9),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.white,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -371,24 +551,23 @@ class _ProfileState extends State<Profile> {
 
   Widget _buildLoadingSection() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             "Informasi Profil",
             style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2D3748),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           ...List.generate(
             6,
             (index) => Padding(
-              padding: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.only(bottom: 12),
               child: _buildLoadingCard(),
             ),
           ),
@@ -406,8 +585,8 @@ class _ProfileState extends State<Profile> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 5,
+            color: const Color(0xFF000000).withOpacity(0.04),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -415,33 +594,33 @@ class _ProfileState extends State<Profile> {
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: const Color(0xFFE2E8F0),
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  height: 12,
-                  width: 80,
+                  height: 10,
+                  width: 60,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(6),
+                    color: const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Container(
-                  height: 16,
+                  height: 12,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(8),
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                 ),
               ],
@@ -454,52 +633,66 @@ class _ProfileState extends State<Profile> {
 
   Widget _buildProfileInfo() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             "Informasi Profil",
             style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2D3748),
             ),
           ),
-          const SizedBox(height: 24),
-          _buildInfoCard("Nama Lengkap", _userName, Icons.person, Colors.blue),
           const SizedBox(height: 16),
-          _buildInfoCard("Email", _email, Icons.email_outlined, Colors.green),
-          const SizedBox(height: 16),
+          _buildInfoCard(
+            "Nama Lengkap",
+            _userName,
+            Icons.person_outline,
+            const Color(0xFF4299E1),
+          ),
+          const SizedBox(height: 12),
+          _buildInfoCard(
+            "Email",
+            _email,
+            Icons.email_outlined,
+            const Color(0xFF48BB78),
+          ),
+          const SizedBox(height: 12),
           _buildInfoCard(
             "Telepon",
             _phone,
             Icons.phone_outlined,
-            Colors.orange,
+            const Color(0xFFED8936),
           ),
-          const SizedBox(height: 16),
-          _buildInfoCard("Peran", _peran, Icons.work_outline, Colors.purple),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          _buildInfoCard(
+            "Peran",
+            _peran,
+            Icons.badge_outlined,
+            const Color(0xFF9F7AEA),
+          ),
+          const SizedBox(height: 12),
           _buildInfoCard(
             "Provinsi",
             _province,
             Icons.location_city_outlined,
-            Colors.teal,
+            const Color(0xFF38B2AC),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             "Kota",
             _city,
             Icons.location_on_outlined,
-            Colors.indigo,
+            const Color(0xFF3182CE),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             "Alamat",
             _address,
             Icons.home_outlined,
-            Colors.brown,
+            const Color(0xFF718096),
             isAddress: true,
           ),
         ],
@@ -509,51 +702,39 @@ class _ProfileState extends State<Profile> {
 
   Widget _buildLogoutButton() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: SizedBox(
         width: double.infinity,
-        height: 56,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.red.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+        height: 48,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
+            backgroundColor: const Color(0xFFE53E3E),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
             ),
             elevation: 0,
           ),
           onPressed: _isLoading ? null : _handleLogout,
           child: _isLoading
               ? const SizedBox(
-                  width: 24,
-                  height: 24,
+                  width: 20,
+                  height: 20,
                   child: CircularProgressIndicator(
                     color: Colors.white,
-                    strokeWidth: 2.5,
+                    strokeWidth: 2,
                   ),
                 )
               : const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.logout_rounded, size: 22),
-                    SizedBox(width: 12),
+                    Icon(Icons.logout, size: 18),
+                    SizedBox(width: 8),
                     Text(
                       "Keluar dari Akun",
                       style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -572,18 +753,17 @@ class _ProfileState extends State<Profile> {
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: const Color(0xFF000000).withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
-        border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
       ),
       child: Row(
         crossAxisAlignment: isAddress
@@ -591,39 +771,35 @@ class _ProfileState extends State<Profile> {
             : CrossAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: iconColor, size: 22),
+            child: Icon(icon, color: iconColor, size: 18),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    color: Colors.grey[600],
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF718096),
                     fontWeight: FontWeight.w500,
-                    letterSpacing: 0.3,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 2),
                 Text(
                   value,
                   style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 16,
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w600,
-                    height: 1.3,
+                    fontSize: 14,
+                    color: Color(0xFF2D3748),
+                    fontWeight: FontWeight.w500,
                   ),
-                  maxLines: isAddress ? 3 : 1,
+                  maxLines: isAddress ? 2 : 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
