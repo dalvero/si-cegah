@@ -45,7 +45,7 @@ dependencies:
   curved_navigation_bar: ^1.0.6
   http: ^1.2.2
   image_picker: ^1.1.2
-  shared_preferences: ^2.2.2 # Ditambah untuk storage token
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:

@@ -39,9 +39,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   void _getUserRole() async {
     final user = _authService.currentUser;
+    print('DEBUG - Current user: $user');
+    print('DEBUG - User ID: ${user?.id}');
+    print('DEBUG - User role: ${user?.role}');
+
     setState(() {
       _userRole = user?.role ?? 'user';
-      _userId = user?.id; // Store user ID
+      _userId = user?.id;
     });
   }
 

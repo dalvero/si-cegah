@@ -121,7 +121,7 @@ class QuizResultPage extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         const Text(
-                          '%',
+                          '/ 100',
                           style: TextStyle(
                             color: Colors.white70,
                             fontSize: 24,
@@ -144,7 +144,7 @@ class QuizResultPage extends StatelessWidget {
                         ),
                         _buildStatItem(
                           'Passing Score',
-                          '$passingScore%',
+                          '$passingScore',
                           Icons.flag,
                         ),
                         if (timeSpent > 0)

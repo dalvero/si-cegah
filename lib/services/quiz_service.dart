@@ -96,4 +96,23 @@ class QuizService {
       return null;
     }
   }
+
+  // NEW: Get detailed test results
+  static Future<Map<String, dynamic>?> getTestResults(String attemptId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/test-attempts/$attemptId/results'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['success'] ? data['data'] : null;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting test results: $e');
+      return null;
+    }
+  }
 }

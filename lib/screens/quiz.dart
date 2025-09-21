@@ -209,6 +209,7 @@ class _QuizPageState extends State<QuizPage> with TickerProviderStateMixin {
     try {
       setState(() => isCompletingTest = true);
 
+      // 1. Complete test
       final response = await http.put(
         Uri.parse(
           'https://sicegah.vercel.app/api/test-attempts/$testAttemptId/complete',
@@ -220,15 +221,39 @@ class _QuizPageState extends State<QuizPage> with TickerProviderStateMixin {
       if (response.statusCode == 200) {
         final responseJson = json.decode(response.body);
         if (responseJson['success']) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => QuizResultPage(
-                summary: responseJson['data']['summary'],
-                detailedResults: detailedResults,
-                videoTitle: widget.videoTitle,
-              ),
+          // 2. Get detailed results with correctAnswer - THE FIX!
+          final resultsResponse = await http.get(
+            Uri.parse(
+              'https://sicegah.vercel.app/api/test-attempts/$testAttemptId/results',
             ),
+            headers: {'Content-Type': 'application/json'},
           );
+
+          if (resultsResponse.statusCode == 200) {
+            final resultsJson = json.decode(resultsResponse.body);
+            if (resultsJson['success']) {
+              // 3. Navigate with COMPLETE data (including correctAnswer & explanation)
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => QuizResultPage(
+                    summary: Map<String, dynamic>.from(
+                      resultsJson['data']['summary'],
+                    ),
+                    detailedResults: List<Map<String, dynamic>>.from(
+                      resultsJson['data']['detailedResults'],
+                    ), // <- FIXED TYPE CASTING!
+                    videoTitle: widget.videoTitle,
+                  ),
+                ),
+              );
+            } else {
+              throw Exception('Get results failed: ${resultsJson['message']}');
+            }
+          } else {
+            throw Exception(
+              'HTTP ${resultsResponse.statusCode}: ${resultsResponse.body}',
+            );
+          }
         } else {
           throw Exception('Complete test failed: ${responseJson['message']}');
         }

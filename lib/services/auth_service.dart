@@ -60,9 +60,124 @@ class AuthService {
     }
   }
 
+  Future<Map<String, dynamic>> sendResetCode(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email.trim()}),
+      );
+
+      print('Send reset code status: ${response.statusCode}');
+      print('Send reset code body: ${response.body}'); // DEBUG
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {
+          'success': true,
+          'message': data['message'],
+          'email': data['data']['email'],
+          'expiresIn': data['data']['expiresIn'],
+        };
+      } else {
+        throw Exception(data['message'] ?? 'Failed to send reset code');
+      }
+    } catch (e) {
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        throw Exception('Network error');
+      }
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  // Method 2: Verify reset code
+  Future<Map<String, dynamic>> verifyResetCode(
+    String email,
+    String resetCode,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/verify-reset-code'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email.trim(),
+          'resetCode': resetCode.trim(),
+        }),
+      );
+
+      print('Verify reset code status: ${response.statusCode}');
+      print('Verify reset code body: ${response.body}'); // DEBUG
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {
+          'success': true,
+          'message': data['message'],
+          'tempToken': data['data']['tempToken'],
+          'email': data['data']['email'],
+          'expiresIn': data['data']['expiresIn'],
+        };
+      } else {
+        throw Exception(data['message'] ?? 'Failed to verify reset code');
+      }
+    } catch (e) {
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        throw Exception('Network error');
+      }
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  // Method 3: Reset password dengan password baru
+  Future<Map<String, dynamic>> resetPasswordWithCode({
+    required String email,
+    required String tempToken,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email.trim(),
+          'tempToken': tempToken,
+          'newPassword': newPassword,
+          'confirmPassword': confirmPassword,
+        }),
+      );
+
+      print('Reset password final status: ${response.statusCode}');
+      print('Reset password final body: ${response.body}'); // DEBUG
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {
+          'success': true,
+          'message': data['message'],
+          'email': data['data']['email'],
+          'name': data['data']['name'],
+        };
+      } else {
+        throw Exception(data['message'] ?? 'Failed to reset password');
+      }
+    } catch (e) {
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        throw Exception('Network error');
+      }
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
   // =======================
   // LOGIN
-  // =======================  
+  // =======================
   Future<LoginResponse> login({
     required String email,
     required String password,
@@ -139,7 +254,7 @@ class AuthService {
           // MENGUPDATE USER SAAT INI
           _currentUser = User.fromJson(data['data']);
           await TokenStorage.saveUser(_currentUser!);
-          
+
           // PERBAIKAN: PAKSA REFRESH DARI SERVER SETELAH UPDATE
           await Future.delayed(const Duration(milliseconds: 300));
           await forceRefreshFromServer();
@@ -195,10 +310,7 @@ class AuthService {
       final response = await http.post(
         Uri.parse('$baseUrl/reset-password'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'token': token,
-          'password': newPassword,
-        }),
+        body: jsonEncode({'token': token, 'password': newPassword}),
       );
 
       print('Reset password confirm status: ${response.statusCode}');
@@ -340,7 +452,7 @@ class AuthService {
         // MEMBERSIHKAN CACHE LOCAL TERLEBIH DAHULU
         _currentUser = null;
       }
-      
+
       // FETCH DATA TERBARU DARI SERVER
       final response = await http.get(
         Uri.parse('https://sicegah.vercel.app/api/users/profile'),
@@ -396,5 +508,5 @@ class AuthService {
       print('Error force refreshing user: $e');
       // TIDAK THROW ERROR AGAR TIDAK CRASH APP
     }
-  }  
+  }
 }

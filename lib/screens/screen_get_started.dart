@@ -12,9 +12,9 @@ class GetStartedScreen extends StatelessWidget {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-                                    // NUANSA WARNA
-              Color(0xFF81D4FA),  // Biru langit cerah
-              Color(0xFFFFF9C4),  // Kuning pucat, adem
+              // NUANSA WARNA
+              Color(0xFF81D4FA), // Biru langit cerah
+              Color(0xFFFFF9C4), // Kuning pucat, adem
             ],
 
             begin: Alignment.topLeft,
@@ -22,7 +22,7 @@ class GetStartedScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(            
+          child: SingleChildScrollView(
             child: Column(
               children: [
                 const SizedBox(height: 35),
@@ -35,7 +35,7 @@ class GetStartedScreen extends StatelessWidget {
                     const Text(
                       "Si - Cegah ",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontSize: 20.0,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 3.0,
@@ -52,7 +52,7 @@ class GetStartedScreen extends StatelessWidget {
                     const Text(
                       "Hebat",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontSize: 20.0,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 3,
@@ -72,7 +72,7 @@ class GetStartedScreen extends StatelessWidget {
                     fontFamily: 'Poppins',
                     letterSpacing: 2.0,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Colors.black,
                   ),
                 ),
                 Text(
@@ -81,7 +81,7 @@ class GetStartedScreen extends StatelessWidget {
                     fontFamily: 'Poppins',
                     fontSize: 30,
                     fontWeight: FontWeight.normal,
-                    color: Colors.white,
+                    color: Colors.black,
                   ),
                 ),
 
@@ -93,7 +93,7 @@ class GetStartedScreen extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontWeight: FontWeight.normal,
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 18,
                   ),
                 ),
@@ -127,7 +127,7 @@ class GetStartedScreen extends StatelessWidget {
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.bold,
                         color: Colors.blue,
-                        fontSize: 20
+                        fontSize: 20,
                       ),
                     ),
                   ),
