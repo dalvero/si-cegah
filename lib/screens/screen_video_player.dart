@@ -1,4 +1,3 @@
-// screen_video_player.dart - Fixed version with proper null handling
 import 'package:flutter/material.dart';
 import 'package:si_cegah/services/video_service.dart';
 import 'package:si_cegah/services/auth_service.dart';
@@ -44,9 +43,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   Future<void> _getUserRole() async {
     try {
-      // Coba refresh/check user session terlebih dahulu
       await _authService.refreshUserSession();
-
       final user = _authService.currentUser;
       print('DEBUG - Current user after refresh: $user');
       print('DEBUG - User ID: ${user?.id}');
@@ -58,16 +55,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         isUserLoading = false;
       });
 
-      // Jika user masih null, mungkin perlu redirect ke login
       if (user == null) {
         print('WARNING - User is null, might need to redirect to login');
-        // Anda bisa menampilkan dialog atau redirect ke login
         _showLoginPrompt();
       }
     } catch (e) {
       print('ERROR - Failed to get user role: $e');
       setState(() {
-        _userRole = 'user'; // Default fallback
+        _userRole = 'user';
         _userId = null;
         isUserLoading = false;
       });
@@ -76,7 +71,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   void _showLoginPrompt() {
-    // Tampilkan dialog atau snackbar untuk login
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -106,7 +100,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       );
 
       if (currentIndex == -1) {
-        currentIndex = 0; // Fallback jika video tidak ditemukan
+        currentIndex = 0;
       }
 
       final videoId = YoutubePlayer.convertUrlToId(
@@ -135,7 +129,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         isLoading = false;
       });
 
-      // Show error message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -254,25 +247,95 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     final currentUser = _authService.currentUser;
 
     if (currentUser == null) {
-      // Show login prompt
+      // Pause video when showing login dialog
+      _controller.pause();
+      
       showDialog(
         context: context,
+        barrierDismissible: false,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('Login Required'),
-            content: const Text('You need to login to access quiz features.'),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 8,
+            title: Row(
+              children: [
+                Icon(
+                  Icons.lock_outline,
+                  color: Colors.orange.shade700,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Akses Terbatas',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
+                  ),
+                ),
+              ],
+            ),
+            content: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Anda perlu login untuk mengakses fitur latihan soal.',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 16,
+                  height: 1.4,
+                ),
+              ),
+            ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Resume video when user cancels
+                  _controller.play();
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey.shade600,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text(
+                  'Batal',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
+                  // Keep video paused when navigating to login
                   // Navigate to login page
                   // Navigator.pushNamed(context, '/login');
                 },
-                child: const Text('Login'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade600,
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Login',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           );
@@ -281,7 +344,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       return;
     }
 
-    // Navigate to quiz
+    // Pause video before navigating to quiz
+    _controller.pause();
+
     final currentVideo = videos[currentIndex];
     Navigator.push(
       context,
@@ -292,7 +357,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           videoTitle: currentVideo.title,
         ),
       ),
-    );
+    ).then((_) {
+      // OPSIONAL, MEMULAI VIDEO KETIKA KEMBALI DARI QUIZ (AUTO - RESUME VIDEO)
+      _controller.play();
+    });
   }
 
   @override
@@ -306,14 +374,32 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   Widget build(BuildContext context) {
     if (isLoading || isUserLoading) {
-      return const Scaffold(
+      return Scaffold(
+        backgroundColor: Colors.grey.shade50,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading video...'),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [      
+                  Image.asset(
+                    "assets/images/welcome.gif", 
+                    width: 330,
+                    height: 330,
+                  ),              
+                  const SizedBox(height: 20),
+                  Text(
+                    'Memuat video...',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -322,30 +408,69 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
     if (videos.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Video Player')),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.grey),
-              SizedBox(height: 16),
-              Text('No videos available'),
-            ],
+        backgroundColor: Colors.grey.shade50,
+        appBar: AppBar(
+          title: const Text(
+            'Video Player',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
+          elevation: 1,
+        ),
+        body: Center(
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.shade300,
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.videocam_off_outlined,
+                  size: 80,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Tidak ada video tersedia',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Silakan coba lagi nanti',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
     final currentVideo = videos[currentIndex];
-
-    // Define navigation items
-    final navItems = [
-      {'icon': Icons.settings_outlined, 'label': 'Pengaturan'},
-      {'icon': Icons.home_outlined, 'label': 'Home'},
-      {'icon': Icons.person_outline, 'label': 'Profil'},
-      if (_userRole == 'admin')
-        {'icon': Icons.dashboard_outlined, 'label': 'Dashboard'},
-    ];
 
     return YoutubePlayerBuilder(
       player: YoutubePlayer(
@@ -355,180 +480,367 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       ),
       builder: (context, player) {
         return Scaffold(
+          backgroundColor: Colors.grey.shade50,
           extendBody: true,
           body: Column(
             children: [
-              // Video Section
+              // Video Section - Tidak diubah posisi dan tampilan
               Stack(
                 children: [
-                  SizedBox(
+                  Container(
                     width: MediaQuery.of(context).size.width,
                     height: 250,
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
                     child: player,
                   ),
                   Positioned(
-                    top: 30,
+                    top: 40,
                     left: 16,
-                    child: CircleAvatar(
-                      backgroundColor: Colors.black.withOpacity(0.5),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(25),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
                       child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        icon: const Icon(
+                          Icons.arrow_back,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                         onPressed: () => Navigator.pop(context),
+                        padding: const EdgeInsets.all(8),
                       ),
                     ),
                   ),
                 ],
               ),
 
-              // Content Section
+              // Enhanced Content Section
               Expanded(
-                child: Column(
-                  children: [
-                    // Title and Category
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            currentVideo.title,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            currentVideo.category.toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Color.fromARGB(255, 158, 158, 158),
-                              fontFamily: 'Poppins',
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                          const Divider(color: Colors.black, height: 24),
-                        ],
-                      ),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
                     ),
+                  ),
+                  child: Column(
+                    children: [
+                      // Video Info Header
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.shade200,
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Video Title
+                            Text(
+                              currentVideo.title,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Poppins',
+                                color: Color(0xFF2D3748),
+                                height: 1.3,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            
+                            // Category Badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.blue.shade600,
+                                    Colors.blue.shade700,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.blue.shade200,
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                currentVideo.category.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  fontFamily: 'Poppins',
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-                    // Scrollable Description
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text(
-                          currentVideo.description,
-                          textAlign: TextAlign.justify,
-                          softWrap: true,
-                          overflow: TextOverflow.visible,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            height: 1.5,
-                            fontFamily: 'Poppins',
+                      // Scrollable Description
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Deskripsi Video',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Poppins',
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.grey.shade200,
+                                  ),
+                                ),
+                                child: Text(
+                                  currentVideo.description,
+                                  textAlign: TextAlign.justify,
+                                  softWrap: true,
+                                  overflow: TextOverflow.visible,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    height: 1.6,
+                                    fontFamily: 'Poppins',
+                                    color: Color(0xFF4A5568),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
-              // Fixed Bottom Buttons (above navigation)
+              // Enhanced Bottom Actions
               Container(
-                color: Colors.white,
-                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 24.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.shade300,
+                      blurRadius: 8,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Latihan Soal Button
-                    SizedBox(
+                    // Quiz Button
+                    Container(
                       width: double.infinity,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: _userId != null
+                            ? LinearGradient(
+                                colors: [
+                                  Colors.blue.shade600,
+                                  Colors.blue.shade700,
+                                ],
+                              )
+                            : LinearGradient(
+                                colors: [
+                                  Colors.orange.shade500,
+                                  Colors.orange.shade600,
+                                ],
+                              ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (_userId != null
+                                    ? Colors.blue.shade300
+                                    : Colors.orange.shade300)
+                                .withOpacity(0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
                       child: ElevatedButton.icon(
                         onPressed: _handleQuizNavigation,
-                        icon: const Icon(Icons.quiz, color: Colors.white),
+                        icon: Icon(
+                          _userId != null ? Icons.quiz : Icons.lock_outline,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                         label: Text(
-                          _userId != null ? "LATIHAN SOAL" : "LOGIN FOR QUIZ",
+                          _userId != null ? "LATIHAN SOAL" : "LOGIN UNTUK QUIZ",
                           style: const TextStyle(
                             color: Colors.white,
                             fontFamily: 'Poppins',
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.5,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _userId != null
-                              ? const Color(0xFF4A90E2)
-                              : Colors.orange,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(16),
                           ),
                         ),
                       ),
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     // Navigation Buttons
                     Row(
                       children: [
+                        // Previous Button
                         Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: currentIndex > 0
-                                ? _playPreviousVideo
-                                : null,
-                            icon: Icon(
-                              Icons.skip_previous,
-                              color: currentIndex > 0
-                                  ? Colors.black
-                                  : Colors.grey,
-                            ),
-                            label: Text(
-                              "SEBELUMNYA",
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.w500,
+                          child: Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              border: Border.all(
                                 color: currentIndex > 0
-                                    ? Colors.black
-                                    : Colors.grey,
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade300,
+                                width: 1.5,
                               ),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                            child: OutlinedButton.icon(
+                              onPressed: currentIndex > 0
+                                  ? _playPreviousVideo
+                                  : null,
+                              icon: Icon(
+                                Icons.skip_previous,
+                                color: currentIndex > 0
+                                    ? Colors.grey.shade700
+                                    : Colors.grey.shade400,
+                                size: 20,
+                              ),
+                              label: Text(
+                                "SEBELUMNYA",
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: currentIndex > 0
+                                      ? Colors.grey.shade700
+                                      : Colors.grey.shade400,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                side: BorderSide.none,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        
+                        const SizedBox(width: 16),
+                        
+                        // Next Button
                         Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: currentIndex < videos.length - 1
-                                ? _playNextVideo
-                                : null,
-                            label: const Text(
-                              "BERIKUTNYA",
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white,
+                          child: Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              gradient: currentIndex < videos.length - 1
+                                  ? LinearGradient(
+                                      colors: [
+                                        Colors.green.shade600,
+                                        Colors.green.shade700,
+                                      ],
+                                    )
+                                  : LinearGradient(
+                                      colors: [
+                                        Colors.grey.shade400,
+                                        Colors.grey.shade500,
+                                      ],
+                                    ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: currentIndex < videos.length - 1
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.green.shade300
+                                            .withOpacity(0.4),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ]
+                                  : [],
+                            ),
+                            child: ElevatedButton.icon(
+                              onPressed: currentIndex < videos.length - 1
+                                  ? _playNextVideo
+                                  : null,
+                              label: const Text(
+                                "BERIKUTNYA",
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: Colors.white,
+                                ),
                               ),
-                            ),
-                            icon: const Icon(
-                              Icons.skip_next,
-                              color: Colors.white,
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: currentIndex < videos.length - 1
-                                  ? Colors.blueAccent
-                                  : Colors.grey,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                              icon: const Icon(
+                                Icons.skip_next,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                           ),

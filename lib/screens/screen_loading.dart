@@ -12,18 +12,17 @@ class LoadingScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Image.asset(
-              "assets/images/baby_loading.gif", 
-              width: 120,
-              height: 120,
+              "assets/images/welcome.gif", 
+              width: 330,
+              height: 330,
             ),
             const SizedBox(height: 16),
             const Text(
-              "Memuat...",
+              "Tunggu sebentar ya..",
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                fontFamily: "Poppins",
-                letterSpacing: 3.0,
+                fontFamily: "Poppins",                
               ),
             ),
           ],

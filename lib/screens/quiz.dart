@@ -299,21 +299,27 @@ class _QuizPageState extends State<QuizPage> with TickerProviderStateMixin {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xffA2D2FF), Color(0xFFFF865E), Color(0xFFFEE440)],
+              colors: [Color(0x000fffff), Color(0x000fffff), Color(0x000fffff)],
             ),
           ),
-          child: const Center(
+          child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+              children: [                
+                // GAMBAR ILUSTRASI
+                Image.asset(
+                  "assets/images/welcome.gif",
+                  width: 330,
+                  height: 330,                
+                ),                            
                 SizedBox(height: 24),
                 Text(
                   'Mempersiapkan Quiz...',
                   style: TextStyle(
                     fontSize: 18,
-                    color: Colors.white,
+                    color: Colors.black,
                     fontWeight: FontWeight.w500,
+                    fontFamily: 'Poppins',
                   ),
                 ),
               ],
