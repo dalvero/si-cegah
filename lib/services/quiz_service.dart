@@ -1,4 +1,6 @@
 // services/quiz_service.dart - Service untuk handle quiz API calls
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 

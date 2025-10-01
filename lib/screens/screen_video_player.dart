@@ -1,12 +1,10 @@
+// ignore_for_file: avoid_print, deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:si_cegah/services/video_service.dart';
 import 'package:si_cegah/services/auth_service.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:si_cegah/model/video_item.dart';
-import 'package:si_cegah/pages/home.dart';
-import 'package:si_cegah/pages/profil.dart';
-import 'package:si_cegah/pages/pengaturan.dart';
-import 'package:si_cegah/pages/admin/dashboard.dart';
 import 'quiz.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
@@ -25,8 +23,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   bool isUserLoading = true;
 
   // Bottom navigation state
-  int _selectedNavIndex = 1; // Default ke Home
-  String? _userRole;
+// Default ke Home
   String? _userId;
   final AuthService _authService = AuthService();
 
@@ -50,7 +47,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       print('DEBUG - User role: ${user?.role}');
 
       setState(() {
-        _userRole = user?.role ?? 'user';
         _userId = user?.id;
         isUserLoading = false;
       });
@@ -62,7 +58,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     } catch (e) {
       print('ERROR - Failed to get user role: $e');
       setState(() {
-        _userRole = 'user';
         _userId = null;
         isUserLoading = false;
       });
@@ -164,84 +159,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     setState(() {});
   }
 
-  void _onNavItemTapped(int index) {
-    if (index == _selectedNavIndex) return;
 
-    Widget targetPage;
-    switch (index) {
-      case 0: // Pengaturan
-        targetPage = const Pengaturan();
-        break;
-      case 1: // Home
-        targetPage = const Home();
-        break;
-      case 2: // Profil
-        targetPage = const Profile();
-        break;
-      case 3: // Dashboard (only for admin)
-        if (_userRole == 'admin') {
-          targetPage = const Dashboard();
-        } else {
-          return;
-        }
-        break;
-      default:
-        return;
-    }
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => targetPage),
-      (route) => false,
-    );
-  }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required int index,
-    required bool isSelected,
-  }) {
-    return Expanded(
-      child: Container(
-        height: 70,
-        alignment: Alignment.center,
-        child: GestureDetector(
-          onTap: () => _onNavItemTapped(index),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF6C63FF) : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  color: isSelected ? Colors.white : Colors.grey,
-                  size: 24,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.grey,
-                    fontSize: 12,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.normal,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   void _handleQuizNavigation() {
     final currentUser = _authService.currentUser;

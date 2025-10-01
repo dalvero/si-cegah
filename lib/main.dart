@@ -1,4 +1,5 @@
-// Perbarui main.dart dengan route lupa password
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:si_cegah/screens/screen_forget_password.dart';
@@ -9,13 +10,12 @@ import 'package:si_cegah/screens/screen_welcome.dart';
 import 'package:si_cegah/pages/home.dart';
 import 'package:si_cegah/pages/profil.dart';
 import 'package:si_cegah/pages/pengaturan.dart';
-import 'package:si_cegah/pages/admin/dashboard.dart';
 import 'package:si_cegah/services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Tetap init Firebase untuk Firestore (data video)
+  // TETAP INIT FIREBASE UNTUK FIRESTORE (DATA VIDEO)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MyApp());
@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true),
       home: const AppSwitcher(),
-      // Tambahkan routes untuk halaman lupa password
+      // MENAMBAHKAN ROUTES UNTUK HALAMAN LUPA PASSWORD
       routes: {
         '/forgot-password': (context) => const ForgetPasswordScreen(),
         '/reset-password': (context) {
@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
           if (args is String) {
             return ResetPasswordScreen(token: args);
           }
-          // Fallback jika tidak ada token
+          // FALLBACK JIKA TIDAK ADA TOKEN
           return const ForgetPasswordScreen();
         },
       },
@@ -67,12 +67,19 @@ class _AppSwitcherState extends State<AppSwitcher> {
     _checkAuthStatus();
   }
 
+  void goToTab(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+
   Future<void> _checkAuthStatus() async {
     try {
       final isLoggedIn = await _authService.isLoggedIn();
 
       if (isLoggedIn) {
-        // Refresh current user data dengan force refresh
+        // REFRESH CURRENT USER DATA DENGAN FORCE REFRESH
         await _authService.refreshCurrentUser(forceRefresh: true);
         final user = _authService.currentUser;
 
@@ -89,6 +96,7 @@ class _AppSwitcherState extends State<AppSwitcher> {
         });
       }
     } catch (e) {
+      // ignore: avoid_print
       print('Error checking auth status: $e');
       setState(() {
         _isLoggedIn = false;
@@ -166,17 +174,17 @@ class _AppSwitcherState extends State<AppSwitcher> {
 
   @override
   Widget build(BuildContext context) {
-    // Show loading while checking auth status
+    // MENAMPILKAN LOADING KETIKA CHECKING AUTH STATUS
     if (_isLoading) {
       return const LoadingScreen();
     }
 
-    // Show welcome screen if not logged in
+    // MENAMPILKAN WELCOME SCREEN IF NOT LOGGED IN
     if (!_isLoggedIn) {
       return const WelcomeScreen();
     }
 
-    // Build main app interface for logged in users
+    // BUILD MAIN APP INTERFACE FOR LOGGED IN USERS
     final userPages = const [
       Pengaturan(key: ValueKey('PengaturanPage')),
       Home(key: ValueKey('HomePage')),
@@ -186,8 +194,7 @@ class _AppSwitcherState extends State<AppSwitcher> {
     final adminPages = const [
       Pengaturan(key: ValueKey('PengaturanPage')),
       Home(key: ValueKey('HomePage')),
-      Profile(key: ValueKey('ProfilPage')),
-      Dashboard(key: ValueKey('DashboardPage')),
+      Profile(key: ValueKey('ProfilPage')),      
     ];
 
     final pages = _role == 'admin' ? adminPages : userPages;

@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, deprecated_member_use, use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:si_cegah/services/auth_service.dart';
 import 'package:si_cegah/services/child_service.dart';
@@ -103,12 +105,6 @@ class _PengaturanState extends State<Pengaturan> {
     Colors.orange,
     Colors.purple,
   ];
-
-  Color _getAvatarColor(String name) {
-    if (name.isEmpty) return Colors.grey;
-    int index = name.codeUnitAt(0) % avatarColors.length;
-    return avatarColors[index];
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -360,7 +356,7 @@ class _PengaturanState extends State<Pengaturan> {
             title: "Role",
             subtitle: _isLoadingUser
                 ? "Memuat..."
-                : (_user?.role?.toString().split('.').last ?? "-"),
+                : (_user?.role.toString().split('.').last ?? "-"),
           ),
           _buildDivider(),
           _buildMenuTile(
@@ -662,17 +658,74 @@ class _PengaturanState extends State<Pengaturan> {
                 bottomRight: Radius.circular(16),
               ),
             ),
-            child: const Text(
-              "Aplikasi si-cegah adalah platform edukasi dan pemantauan stunting "
-              "yang dikembangkan untuk membantu bidan dalam memberikan edukasi "
-              "kepada orang tua. Aplikasi ini merupakan bagian dari penelitian ilmiah "
-              "oleh dosen kesehatan.",
-              textAlign: TextAlign.justify,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.black87,
-                height: 1.5,
-              ),
+            child:  Column(
+              crossAxisAlignment : CrossAxisAlignment.start,
+              children : [
+                Text(
+                  "Aplikasi SiCegah-Hebat (sahabat ibu cegah stunting membentuk generasi hebat) merupakan "
+                  "edukasi berbasis android yang tujuan meningkatkan praktik baik dan memenuhi kuatitas dan "
+                  "kualitas makan anak.",
+                  textAlign: TextAlign.justify,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    height: 1.5,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  "Aplikasi ini merupakan pengembangan hasil penelitian dari pendanaan RIMM BRIN tahun "
+                  "2022-2023 dan RKI JATIMPro tahun 2024 dan 2025. ",                  
+                  textAlign: TextAlign.justify,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    height: 1.5,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  "Terima Kasih ",            
+                  textAlign: TextAlign.justify,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    height: 1.5,
+                  ),
+                ),
+                Text(
+                  "a. Tim penyusun materi video edukasi. ",            
+                  textAlign: TextAlign.justify,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    height: 1.5,
+                  ),
+                ),
+                Text(
+                  "b. Tim pengembangan aplikasi. ",            
+                  textAlign: TextAlign.justify,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    height: 1.5,
+                  ),
+                ),
+                Text(
+                  "\t\t\t\t\t\t1. Dr. Nurul Muslihah, SP., M.Kes. \n"
+                  "\t\t\t\t\t\t2. Catur Saptaning Wilujeng, S.Gz, M.PH. \n"
+                  "\t\t\t\t\t\t3. Intan Yusuf Habibie, S.Gz, M.Sc. \n"
+                  "\t\t\t\t\t\t4. Hayu Iyaka Nastania, S.Gz, M.PH. \n"
+                  "\t\t\t\t\t\t5. Alphareno Yanuar Syaputra. \n"
+                  "\t\t\t\t\t\t6. Daniel Jefry Alfero. \n",
+                  textAlign: TextAlign.justify,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    height: 1.5,
+                  ),
+                ),
+              ]
             ),
           ),
         ],
@@ -1174,7 +1227,7 @@ class _PengaturanState extends State<Pengaturan> {
     final provinceController = TextEditingController(text: _user?.province ?? '');
     final cityController = TextEditingController(text: _user?.city ?? '');
     final addressController = TextEditingController(text: _user?.address ?? '');
-    String selectedRole = _user?.role?.toString().split('.').last ?? 'BIDAN';
+    String selectedRole = _user?.role.toString().split('.').last ?? 'BIDAN';
     bool isLoading = false;
 
     await showDialog(

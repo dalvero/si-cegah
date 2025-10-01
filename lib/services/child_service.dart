@@ -1,4 +1,6 @@
 // lib/services/child_service.dart
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:si_cegah/models/child_model.dart';

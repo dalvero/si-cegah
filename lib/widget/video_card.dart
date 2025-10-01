@@ -1,4 +1,6 @@
 // widget/video_card.dart - Clean production version
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import '../services/user_service.dart';
 

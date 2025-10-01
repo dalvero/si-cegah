@@ -1,4 +1,6 @@
 // lib/services/auth_service.dart
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/auth_models.dart';
@@ -85,7 +87,7 @@ class AuthService {
       }
     } catch (e) {
       print('ERROR - Failed to fetch user from server: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -500,18 +502,6 @@ class AuthService {
   }
 
   // MENGEKSTRAK TOKEN DARI COOKIE HEADER (opsional, karena backend pakai HTTP-only cookie)
-  Future<void> _extractAndSaveToken(http.Response response) async {
-    final cookies = response.headers['set-cookie'];
-    if (cookies != null) {
-      final tokenMatch = RegExp(r'auth-token=([^;]+)').firstMatch(cookies);
-      if (tokenMatch != null) {
-        final token = tokenMatch.group(1);
-        if (token != null) {
-          await TokenStorage.saveToken(token);
-        }
-      }
-    }
-  }
 
   // =======================
   // LOGOUT

@@ -21,30 +21,14 @@ class WelcomeScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Si - Cegah ",
+                    "Si - Cegah Hebat",
                     style: TextStyle(
                       color: Colors.black,
                       fontSize: 30.0,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Poppins',
                     ),
-                  ),
-                  SizedBox(width: 2),
-                  Image.asset(
-                    "assets/images/baby1.png",
-                    width: 50,
-                    height: 50,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    "Hebat",
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 30.0,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
+                  ),                  
                 ],
               ),
               const SizedBox(height: 48),

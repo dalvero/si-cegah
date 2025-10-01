@@ -1,5 +1,3 @@
-// home.dart - Updated dengan user context untuk star rating
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:si_cegah/models/auth_models.dart';
 import 'package:flutter/material.dart';
 import 'package:si_cegah/services/auth_service.dart';
@@ -19,11 +17,9 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final VideoService _videoService = VideoService();
-  final AuthService _authService = AuthService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AuthService _authService = AuthService();  
 
   User? _user;
-  String _userName = "Memuat...";
   List<VideoItem> _videos = [];
   bool _isLoading = false;
   String? _error;
@@ -32,22 +28,7 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
     _user = _authService.currentUser;
-    _fetchUserProfile();
     _loadVideos();
-  }
-
-  Future<void> _fetchUserProfile() async {
-    if (_user != null) {
-      setState(() {
-        _userName = _user!.name;
-      });
-    } else {
-      await _authService.refreshCurrentUser();
-      _user = _authService.currentUser;
-      setState(() {
-        _userName = "Pengguna";
-      });
-    }
   }
 
   Future<void> _loadVideos() async {
@@ -80,7 +61,7 @@ class _HomeState extends State<Home> {
     await _loadVideos();
   }
 
-  // Show celebration snackbar when returned from quiz completion
+  // MENAMPILKAN SNACKBAR SELEBRASI KETIKA KEMBALI DARI QUIZ
   void _showCelebrationFromQuiz(Map<String, dynamic> celebrationData) {
     final message = celebrationData['message'] ?? 'Test selesai!';
     final starRating = celebrationData['starRating'] ?? 0;
@@ -159,11 +140,11 @@ class _HomeState extends State<Home> {
               duration: video.duration,
               thumbnail: thumbnailUrl,
               description: video.description,
-              videoId: video.id, // TAMBAHAN: Pass video ID
-              userId: _user?.id, // TAMBAHAN: Pass user ID for star rating
+              videoId: video.id, // TAMBAHAN: PASS VIDEO IDPass video ID
+              userId: _user?.id, // TAMBAHAN: PASS USER ID FOR STAR RATING
               rating: double.tryParse(video.rating) ?? 0.0,
               onTap: () async {
-                // Navigate to VideoPlayerScreen and wait for result
+                // NAVIGASI KE VIDEO PLAYER SCREEN DAN MENUNGGU HASILNYA
                 final result = await Navigator.of(context)
                     .push<Map<String, dynamic>>(
                       PageRouteBuilder(
@@ -189,10 +170,10 @@ class _HomeState extends State<Home> {
                       ),
                     );
 
-                // If celebration data returned from quiz completion
+                // JIKA CELBRATION DATA KEMBALI DARI QUIZ
                 if (result != null && result.containsKey('message')) {
                   _showCelebrationFromQuiz(result);
-                  // Refresh video list to update star ratings
+                  // MEREFRESH VIDEO LIST UNTUK UPDATE STAR RATING
                   _refreshVideos();
                 }
               },
@@ -212,13 +193,13 @@ class _HomeState extends State<Home> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // === JUDUL ATAS ===
+            // JUDUL ATAS
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const Text(
-                  "Si - Cegah ",
+                  "Si - Cegah Hebat",
                   style: TextStyle(
                     color: Colors.black,
                     fontSize: 20.0,
@@ -227,30 +208,17 @@ class _HomeState extends State<Home> {
                     fontFamily: 'Poppins',
                   ),
                 ),
-                const SizedBox(width: 2),
-                Image.asset("assets/images/baby1.png", width: 50, height: 50),
-                const SizedBox(width: 8),
-                const Text(
-                  "Hebat",
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 20.0,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 3,
-                    fontFamily: 'Poppins',
-                  ),
-                ),
               ],
             ),
 
             const SizedBox(height: 30),
 
-            // === BANNER ===
+            //BANNER
             const BannerCarousel(),
 
             const SizedBox(height: 10),
 
-            // === VIDEO LIST ===
+            // VIDEO LIST
             Align(
               alignment: Alignment.bottomCenter,
               child: Container(

@@ -33,7 +33,7 @@ class GetStartedScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const Text(
-                      "Si - Cegah ",
+                      "Si - Cegah Hebat",
                       style: TextStyle(
                         color: Colors.black,
                         fontSize: 20.0,
@@ -41,24 +41,7 @@ class GetStartedScreen extends StatelessWidget {
                         letterSpacing: 3.0,
                         fontFamily: 'Poppins',
                       ),
-                    ),
-                    const SizedBox(width: 2),
-                    Image.asset(
-                      "assets/images/baby1.png",
-                      width: 30,
-                      height: 30,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      "Hebat",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 20.0,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 3,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
+                    ),                    
                   ],
                 ),
 

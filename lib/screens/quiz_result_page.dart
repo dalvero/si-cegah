@@ -1,4 +1,6 @@
 // quiz_result_page.dart - Updated with celebration data return
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 
 class QuizResultPage extends StatelessWidget {
@@ -31,13 +33,6 @@ class QuizResultPage extends StatelessWidget {
     return '${minutes}m ${remainingSeconds}s';
   }
 
-  Color _getScoreColor() {
-    final score = safeSummary['score'] as int;
-    if (score >= 90) return Colors.green;
-    if (score >= 80) return Colors.lightGreen;
-    if (score >= 70) return Colors.orange;
-    return Colors.red;
-  }
 
   List<String> _getAchievementsUnlocked(int score) {
     List<String> achievements = [];
@@ -72,8 +67,8 @@ class QuizResultPage extends StatelessWidget {
               gradient: LinearGradient(
                 colors: isPassed
                     ? [
-                        Color.fromARGB(255, 54, 137, 255)!,
-                        Color.fromARGB(255, 72, 206, 251)!,
+                        Color.fromARGB(255, 54, 137, 255),
+                        Color.fromARGB(255, 72, 206, 251),
                       ]
                     : [Colors.orange[400]!, Colors.orange[600]!],
                 begin: Alignment.topLeft,
@@ -583,7 +578,7 @@ class QuizResultPage extends StatelessWidget {
                   ),
                 ),
               );
-            }).toList(),
+            }),
 
             const SizedBox(height: 16),
 

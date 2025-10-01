@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field, deprecated_member_use, sized_box_for_whitespace
+
 import 'package:flutter/material.dart';
 import 'package:si_cegah/services/auth_service.dart';
 import 'package:si_cegah/services/user_service.dart';
@@ -449,32 +451,7 @@ class _ProfileState extends State<Profile> {
         ),
       ),
       child: Stack(
-        children: [
-          // Back button
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 12,
-            left: 20,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
+        children: [          
           // Profile info
           Positioned(
             bottom: 32,
